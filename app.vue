@@ -16,6 +16,11 @@ import {ref, onMounted} from 'vue';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
+import {useSound} from '@vueuse/sound'
+import diceSfx from 'public/sounds/dice_rolling.mp3'
+
+const {play} = useSound(diceSfx)
+
 const canvas = ref(null); // Reference to the HTML canvas element
 const diceResults = ref([]); // Reactive array to store individual dice results
 const totalResult = ref(0); // Reactive variable to store the total sum of dice
@@ -364,6 +369,10 @@ function throwDice() {
         15 + Math.random() * 10 // Increased angular velocity
     );
   }
+
+  setTimeout(() => {
+    play();
+  }, 800)
 }
 
 /**
