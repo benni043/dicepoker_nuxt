@@ -1,12 +1,13 @@
 <template>
+  <DataTableComponent :data-column-player="list"></DataTableComponent>
+
   <div class="dice-container">
-    <canvas ref="canvas"/>
+    <canvas ref="canvas" />
 
     <button @click="throwDice" :disabled="rolling">Würfeln</button>
 
     <div v-if="diceResults.length > 0 && !rolling" class="results">
-      <p>Gewürfelte Werte: {{ diceResults.join(', ') }}</p>
-      <p class="total">Gesamt: {{ totalResult }}</p>
+      <p>Gewürfelte Werte: {{ diceResults.join(", ") }}</p>
     </div>
     <div v-else-if="rolling" class="rolling-status">
       <p>Würfel rollen...</p>
@@ -14,43 +15,83 @@
   </div>
 </template>
 
-<script setup>
-import {ref, onMounted, onBeforeUnmount} from 'vue';
-import * as THREE from 'three';
-import {io} from 'socket.io-client';
-import {useSound} from '@vueuse/sound';
-import diceSfx from '/sounds/dice_rolling.mp3'; // Correct path for public assets
+<script setup lang="ts">
+let p1: Player = { uuid: "0000", name: "Player 1" };
+let p2: Player = { uuid: "0001", name: "Player 2" };
+
+let dataColumn: DataColumn = {
+  ones: 0,
+  twos: 0,
+  threes: 0,
+  fours: 0,
+  fives: 0,
+  sixes: 0,
+  fullHouse: 10,
+  street: 0,
+  poker: 0,
+  grande: 0,
+  doubleGrande: 0,
+};
+
+let dataColumn2: DataColumn = {
+  ones: 1,
+  twos: 2,
+  threes: 3,
+  fours: 0,
+  fives: 0,
+  sixes: 0,
+  fullHouse: 10,
+  street: 0,
+  poker: 0,
+  grande: 0,
+  doubleGrande: 0,
+};
+
+let dataColumnPlayer1: DataColumnPlayer = {
+  player: p1,
+  dataColumns: [dataColumn, dataColumn2],
+};
+
+let dataColumnPlayer2: DataColumnPlayer = {
+  player: p2,
+  dataColumns: [dataColumn2, dataColumn],
+};
+
+let list = [dataColumnPlayer1, dataColumnPlayer2];
+
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import * as THREE from "three";
+import { io } from "socket.io-client";
+import { useSound } from "@vueuse/sound";
+import diceSfx from "../assets/sounds/dice_rolling.mp3";
 
 // --- Reactive State ---
-const canvas = ref(null); // Reference to the HTML canvas element
-const diceResults = ref([]); // Reactive array to store individual dice results
-const totalResult = ref(0); // Reactive variable to store the total sum of dice
-const rolling = ref(false); // Flag to track if dice are currently rolling and settling
+const canvas = ref(null);
+const diceResults = ref([]);
+const rolling = ref(false);
 
 // --- Sound Effect ---
-const {play} = useSound(diceSfx);
+const { play } = useSound(diceSfx);
 
 // --- Three.js Variables ---
-let scene, camera, renderer;
-const diceMeshes = []; // Array to hold Three.js meshes (visual dice)
+let scene: THREE.Scene;
+let camera: THREE.PerspectiveCamera;
+let renderer: THREE.WebGLRenderer;
+const diceMeshes: THREE.Mesh[] = []; // Array to hold Three.js meshes (visual dice)
 
-// --- Socket.IO Client ---
-// Adjust this URL if your backend is not on localhost:3000
 const socket = io("/lobby", {
   path: "/api/socket.io",
 });
 
-// --- Constants (should match backend for visual consistency) ---
 const numDice = 5;
-const fieldRadius = 2.5; // Radius of the square playing field
+const fieldRadius = 2.5;
 const diceSize = 0.5;
 
 /**
  * Creates an array of MeshStandardMaterial, one for each face of a die (1-6).
  * Each material has a CanvasTexture with the appropriate number of dots.
- * @returns {Array<THREE.MeshStandardMaterial>} An array of materials for the dice faces.
  */
-function createDiceMaterial() {
+function createDiceMaterial(): THREE.MeshStandardMaterial[] {
   const materials = [];
   const size = 512; // Canvas resolution for the dot textures
   const radius = 40; // Radius of each dot on the die face
@@ -59,11 +100,11 @@ function createDiceMaterial() {
   const positions = {
     center: [size / 2, size / 2],
     topLeft: [size / 4, size / 4],
-    topRight: [3 * size / 4, size / 4],
+    topRight: [(3 * size) / 4, size / 4],
     middleLeft: [size / 4, size / 2],
-    middleRight: [3 * size / 4, size / 2],
-    bottomLeft: [size / 4, 3 * size / 4],
-    bottomRight: [3 * size / 4, 3 * size / 4],
+    middleRight: [(3 * size) / 4, size / 2],
+    bottomLeft: [size / 4, (3 * size) / 4],
+    bottomRight: [(3 * size) / 4, (3 * size) / 4],
   };
 
   // Maps the index of the materials array (which corresponds to a specific face of
@@ -80,35 +121,54 @@ function createDiceMaterial() {
     // Face 3 (+X)
     [positions.topLeft, positions.center, positions.bottomRight],
     // Face 4 (-X)
-    [positions.topLeft, positions.topRight, positions.bottomLeft, positions.bottomRight],
+    [
+      positions.topLeft,
+      positions.topRight,
+      positions.bottomLeft,
+      positions.bottomRight,
+    ],
     // Face 1 (+Y)
     [positions.center],
     // Face 6 (-Y)
-    [positions.topLeft, positions.topRight, positions.middleLeft, positions.middleRight, positions.bottomLeft, positions.bottomRight],
+    [
+      positions.topLeft,
+      positions.topRight,
+      positions.middleLeft,
+      positions.middleRight,
+      positions.bottomLeft,
+      positions.bottomRight,
+    ],
     // Face 2 (+Z)
     [positions.topLeft, positions.bottomRight],
     // Face 5 (-Z)
-    [positions.topLeft, positions.topRight, positions.center, positions.bottomLeft, positions.bottomRight],
+    [
+      positions.topLeft,
+      positions.topRight,
+      positions.center,
+      positions.bottomLeft,
+      positions.bottomRight,
+    ],
   ];
 
   // Generate a canvas texture for each of the six faces
   for (let i = 0; i < 6; i++) {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
 
     // Fill the background of the face with white
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, size, size);
+    ctx!.fillStyle = "white";
+    ctx!.fillRect(0, 0, size, size);
 
     // Draw black dots according to the current face's pattern
-    ctx.fillStyle = 'black';
+    ctx!.fillStyle = "black";
     const dots = dotsMap[i];
-    dots.forEach(([x, y]) => {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fill();
+
+    dots!.forEach(([x, y]) => {
+      ctx!.beginPath();
+      ctx!.arc(x!, y!, radius, 0, 2 * Math.PI);
+      ctx!.fill();
     });
 
     // Create a Three.js texture from the canvas and set filtering
@@ -117,7 +177,7 @@ function createDiceMaterial() {
     texture.magFilter = THREE.LinearFilter;
 
     // Create and store the material for this face
-    materials.push(new THREE.MeshStandardMaterial({map: texture}));
+    materials.push(new THREE.MeshStandardMaterial({ map: texture }));
   }
 
   return materials;
@@ -130,18 +190,18 @@ function createDiceMaterial() {
 function init() {
   // --- Three.js Setup ---
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x228B22); // Green table background
+  scene.background = new THREE.Color(0x228b22); // Green table background
 
   camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
   camera.position.set(0, 5, 3); // Position camera above the field
   camera.lookAt(0, 0, 0); // Point camera towards the center of the field
 
-  renderer = new THREE.WebGLRenderer({canvas: canvas.value, antialias: true});
+  renderer = new THREE.WebGLRenderer({
+    canvas: canvas.value!,
+    antialias: true,
+  });
   renderer.setSize(500, 500); // Fixed size for the display canvas
   renderer.setPixelRatio(window.devicePixelRatio); // For better quality on high-res screens
-
-  // Handle window resize (optional, but good practice)
-  window.addEventListener('resize', onWindowResize);
 
   // --- Lighting ---
   const light = new THREE.DirectionalLight(0xffffff, 1);
@@ -160,9 +220,9 @@ function init() {
     const mesh = new THREE.Mesh(geometry, diceMaterials);
     // Set initial position - these will be updated by server data
     mesh.position.set(
-        (i - (numDice - 1) / 2) * diceSize * 1.5,
-        diceSize / 2,
-        fieldRadius - diceSize * 1.5
+      (i - (numDice - 1) / 2) * diceSize * 1.5,
+      diceSize / 2,
+      fieldRadius - diceSize * 1.5
     );
     scene.add(mesh);
     diceMeshes.push(mesh);
@@ -178,32 +238,19 @@ function init() {
 }
 
 /**
- * Handles window resizing to keep the renderer and camera aspect ratio correct.
- */
-function onWindowResize() {
-  if (canvas.value) {
-    const width = canvas.value.clientWidth;
-    const height = canvas.value.clientHeight;
-    renderer.setSize(width, height);
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-  }
-}
-
-/**
  * Adds a visible wall mesh to the Three.js scene.
  * @param {number} x X position of the visual wall.
  * @param {number} y Y position of the visual wall.
  * @param {number} z Z position of the visual wall.
  * @param {number} rotY Y rotation (Euler angle) of the visual wall.
  */
-function addVisualWall(x, y, z, rotY) {
+function addVisualWall(x: number, y: number, z: number, rotY: number) {
   const wallLength = fieldRadius * 2; // Length of the wall
   const wallHeight = 1; // Height of the wall
   const wallThickness = 0.1; // Thickness of the wall
 
   const geometry = new THREE.BoxGeometry(wallLength, wallHeight, wallThickness);
-  const material = new THREE.MeshStandardMaterial({color: 0x654321}); // Brown color
+  const material = new THREE.MeshStandardMaterial({ color: 0x654321 }); // Brown color
   const mesh = new THREE.Mesh(geometry, material);
 
   mesh.position.set(x, y, z);
@@ -220,11 +267,9 @@ function throwDice() {
 
   rolling.value = true; // Indicate that dice are rolling
   diceResults.value = []; // Clear previous results display
-  totalResult.value = 0; // Reset total sum display
 
   // Only emit the event to the server; the server handles the physics.
-  console.log("throing front")
-  socket.emit('throwDice');
+  socket.emit("throwDice");
 }
 
 /**
@@ -240,44 +285,51 @@ function animate() {
 onMounted(() => {
   init();
 
-  socket.on('connect', () => {
-    console.log('Connected to server via Socket.IO');
+  socket.on("connect", () => {
+    console.log("Connected to server via Socket.IO");
   });
 
-  socket.on('disconnect', () => {
-    console.log('Disconnected from server');
+  socket.on("disconnect", () => {
+    console.log("Disconnected from server");
   });
 
   // Listener for dice state updates from the server
-  socket.on('diceStateUpdate', (diceStates) => {
+  socket.on("diceStateUpdate", (diceStates) => {
     // Synchronize the positions and rotations of Three.js meshes
-    diceStates.forEach((state, index) => {
+    diceStates.forEach((state: any, index: number) => {
       if (diceMeshes[index]) {
-        diceMeshes[index].position.set(state.position.x, state.position.y, state.position.z);
+        diceMeshes[index].position.set(
+          state.position.x,
+          state.position.y,
+          state.position.z
+        );
         // Important: use THREE.Quaternion for the mesh
-        diceMeshes[index].quaternion.set(state.quaternion.x, state.quaternion.y, state.quaternion.z, state.quaternion.w);
+        diceMeshes[index].quaternion.set(
+          state.quaternion.x,
+          state.quaternion.y,
+          state.quaternion.z,
+          state.quaternion.w
+        );
       }
     });
   });
 
   // Listener for final dice results from the server
-  socket.on('diceResult', (results) => {
-    console.log('Received final results:', results);
+  socket.on("diceResult", (results) => {
+    console.log("Received final results:", results);
     diceResults.value = results.individual; // Update array of individual results
-    totalResult.value = results.total; // Update total sum
     rolling.value = false; // Dice have settled
 
-    // Play sound effect when results are received (i.e., dice have settled)
-    play();
+    // Play sound effect
+    // play();
   });
 });
 
 onBeforeUnmount(() => {
-  socket.disconnect(); // Clean up socket connection
-  window.removeEventListener('resize', onWindowResize); // Remove resize listener
+  socket.disconnect();
+
   // Dispose Three.js objects to prevent memory leaks if necessary for more complex scenes
   if (renderer) renderer.dispose();
-  // No need to dispose scene/camera for this simple setup as they are implicitly cleaned up
 });
 </script>
 
@@ -305,7 +357,7 @@ canvas {
 button {
   padding: 12px 25px;
   font-size: 1.2em;
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 5px;
