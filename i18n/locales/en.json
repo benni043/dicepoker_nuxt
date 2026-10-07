@@ -1,0 +1,202 @@
+{
+	"nav": {
+		"stats": "Statistics",
+		"settings": "Settings",
+		"newLobby": "New lobby",
+		"join": "Join"
+	},
+	"common": {
+		"loading": "Loading…",
+		"retry": "Try again",
+		"toHome": "Back to home",
+		"columns": "{n} column | {n} columns"
+	},
+	"phase": {
+		"waiting": "Waiting",
+		"playing": "Playing",
+		"finished": "Finished"
+	},
+	"login": {
+		"title": "Welcome to Dice Poker",
+		"subtitle": "Sign in to create lobbies and play with friends.",
+		"google": "Sign in with Google",
+		"failed": "Sign-in failed. Please try again.",
+		"devHint": "Development only: sign in as a test player without Google.",
+		"devName": "Test player name",
+		"devLogin": "Sign in"
+	},
+	"home": {
+		"hello": "Hi {name}",
+		"intro": "Dice poker for 2–{max} players. Create a lobby or join one.",
+		"defaultLobbyName": "{name}'s table",
+		"createTitle": "Create lobby",
+		"create": "Create",
+		"joinTitle": "Join lobby",
+		"join": "Join",
+		"statsTitle": "Your statistics",
+		"statsDetails": "Details →",
+		"myGames": "Your games",
+		"playerCount": "{count}/{max} players",
+		"yourTurn": "Your turn",
+		"continue": "Continue",
+		"open": "Open",
+		"notice": {
+			"kicked": "You were removed from the lobby.",
+			"closed": "The host closed the lobby."
+		},
+		"createText": "Pick a name, password and number of columns, then invite friends.",
+		"joinText": "Got a lobby ID and password? Jump in here.",
+		"spectator": "Spectator"
+	},
+	"fields": {
+		"lobbyName": "Name",
+		"password": "Password",
+		"columns": "Columns",
+		"maxPlayers": "Max. players",
+		"lobbyId": "Lobby ID",
+		"die": "Die",
+		"column": "Column",
+		"name": "Name"
+	},
+	"lobby": {
+		"connecting": "Connecting to lobby {id}…",
+		"notFoundTitle": "Lobby not found",
+		"notFoundText": "The lobby {id} does not exist (anymore).",
+		"joinTitle": "Join lobby {id}",
+		"copyInvite": "Copy invite link",
+		"copied": "Link copied!",
+		"leave": "Leave",
+		"leaveGameConfirm": "Really leave the running game? Your points will be removed.",
+		"close": "Close lobby",
+		"closeConfirm": "Really close the lobby? All players will be removed.",
+		"players": "Players ({count}/{max})",
+		"host": "Host",
+		"you": "You",
+		"kick": "Remove",
+		"start": "Start game",
+		"minPlayers": "At least {min} players needed.",
+		"waitForHost": "Waiting for the host to start the game…",
+		"inviteTitle": "Invite friends",
+		"inviteText": "Share the link and the password.",
+		"roll": "Roll",
+		"skip": "Skip turn",
+		"yourTurnTitle": "Your turn",
+		"strikeConfirm": "Strike {field} in column {column}?",
+		"status": {
+			"rolling": "The dice are rolling…",
+			"yourTurnStart": "Your turn – roll the dice!",
+			"yourTurnHold": "Click dice to hold them, roll again or enter your result.",
+			"yourTurnScore": "Enter your result in a free field.",
+			"offline": "{name} is offline.",
+			"otherTurn": "It's {name}'s turn (roll {roll}/{max})."
+		},
+		"lastAction": {
+			"struck": "{name} strikes {field} (column {column}).",
+			"scored": "{name}: {points} point on {field} (column {column}) | {name}: {points} points on {field} (column {column})",
+			"served": "served!"
+		},
+		"results": {
+			"youWon": "You won!",
+			"winner": "{name} wins!",
+			"tie": "It's a tie!",
+			"newRound": "New round",
+			"newRoundHint": "The host can start a new round."
+		},
+		"notice": {
+			"playerLeft": "{name} left the lobby.",
+			"notEnoughPlayers": "Not enough players – the game was ended.",
+			"abandoned": "All players were offline – the game was cancelled."
+		},
+		"spectators": "Spectators ({count})",
+		"spectatorNote": "You are watching. As soon as a seat is free, you play from the next round on."
+	},
+	"tray": {
+		"held": "held",
+		"die": "Die {n}",
+		"dieValue": "Die {n}: {value}"
+	},
+	"sheet": {
+		"total": "Total",
+		"cellTitle": "{field} in column {column}"
+	},
+	"categories": {
+		"ones": "Ones",
+		"twos": "Twos",
+		"threes": "Threes",
+		"fours": "Fours",
+		"fives": "Fives",
+		"sixes": "Sixes",
+		"fullHouse": "Full house",
+		"street": "Straight",
+		"poker": "Poker",
+		"grande": "Grande",
+		"doubleGrande": "Double grande"
+	},
+	"stats": {
+		"title": "Statistics",
+		"games": "Games",
+		"wins": "Wins",
+		"winRate": "Win rate",
+		"best": "Best score",
+		"bestShort": "Best",
+		"average": "Avg. points",
+		"recent": "Recent games",
+		"date": "Date",
+		"lobby": "Lobby",
+		"rank": "Rank",
+		"points": "Points",
+		"win": "Win",
+		"rankOf": "{rank} / {count}",
+		"noGames": "No finished games yet.",
+		"leaderboard": "Leaderboard",
+		"player": "Player",
+		"rate": "Rate",
+		"noEntries": "No entries yet."
+	},
+	"settings": {
+		"title": "Settings",
+		"profile": "Profile",
+		"displayName": "Display name",
+		"save": "Save",
+		"saved": "Saved.",
+		"language": "Language",
+		"account": "Account",
+		"loggedInAs": "Signed in as {name}",
+		"logout": "Sign out"
+	},
+	"errors": {
+		"INTERNAL": "Something went wrong. Please try again.",
+		"TIMEOUT": "The server is not responding.",
+		"fieldMissing": "{field} is missing.",
+		"fieldTooLong": "{field} is too long (max. {max} characters).",
+		"fieldRange": "{field} must be between {min} and {max}.",
+		"NOT_FOUND": "Lobby not found.",
+		"NOT_MEMBER": "You are not a member of this lobby.",
+		"NOT_IN_GAME": "You are not playing in this round.",
+		"HOST_ONLY": "Only the host can do that.",
+		"NO_GAME": "No game is running.",
+		"NOT_YOUR_TURN": "It's not your turn.",
+		"STILL_ROLLING": "The dice are still rolling.",
+		"WRONG_PASSWORD": "Wrong password.",
+		"ALREADY_STARTED": "The game has already started.",
+		"INVALID_PLAYER": "Invalid player.",
+		"MIN_PLAYERS": "At least {min} players needed.",
+		"NO_ROLLS_LEFT": "No rolls left – enter your result.",
+		"ALL_HELD": "All dice are held.",
+		"CANNOT_HOLD": "You can't hold dice right now.",
+		"MUST_ROLL_FIRST": "You have to roll first.",
+		"UNKNOWN_FIELD": "Unknown field.",
+		"FIELD_TAKEN": "This field is already taken.",
+		"ONLY_OFFLINE_SKIP": "Only offline players can be skipped.",
+		"ONLY_IN_WAITING_ROOM": "This is only possible in the waiting room."
+	},
+	"notFound": {
+		"title": "Page not found",
+		"text": "This page does not exist."
+	},
+	"gameBar": {
+		"playing": "Game in progress: {name}",
+		"watching": "You are watching: {name}",
+		"back": "Back to game"
+	}
+}

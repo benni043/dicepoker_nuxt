@@ -1,75 +1,68 @@
-# Nuxt Minimal Starter
+# Dice Poker
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Multiplayer dice poker (Würfelpoker) for 2–8 players: lobbies with password, 3D dice, Google login, stats.
+
+Nuxt 4 · socket.io · three.js + cannon-es · Postgres (Drizzle ORM) · nuxt-auth-utils · @nuxtjs/i18n (de/en)
 
 ## Setup
 
-Make sure to install dependencies:
+1. Copy `.env.example` to `.env` and fill it in:
+   - `NUXT_SESSION_PASSWORD`: at least 32 random characters (`openssl rand -base64 32`)
+   - `NUXT_OAUTH_GOOGLE_CLIENT_ID` / `NUXT_OAUTH_GOOGLE_CLIENT_SECRET`: create an OAuth client
+     ("Web application") at https://console.cloud.google.com/apis/credentials and add
+     `http://localhost:3000/api/auth/callback/google` (plus your production URL) as an authorized redirect URI.
+2. Install dependencies: `pnpm install`
+
+## Development
 
 ```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
+pnpm db:up   # starts Postgres in Docker (docker compose up -d db)
+pnpm dev     # http://localhost:3000, migrations run automatically on startup
 ```
 
-## Development Server
+In development the login page also offers a **test login without Google**, which is handy for
+playing against yourself in several browser windows. It does not exist in production builds.
 
-Start the development server on `http://localhost:3000`:
+After changing `server/db/schema.ts`, generate a migration with `pnpm db:generate`.
+
+## Linting
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+pnpm lint:fix    # Biome: format + lint with auto-fixes
+pnpm lint:full   # Biome check + nuxi typecheck
 ```
 
-## Production
-
-Build the application for production:
+## Hosting with Docker
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+docker compose up -d --build
 ```
 
-Locally preview production build:
+Starts Postgres and the app on port 3000 (`APP_PORT` to change). Behind a reverse proxy, set
+`NUXT_OAUTH_GOOGLE_REDIRECT_URL=https://your-domain/api/auth/callback/google` and make sure the proxy forwards
+WebSockets (`/api/socket.io`).
 
-```bash
-# npm
-npm run preview
+## Rules
 
-# pnpm
-pnpm preview
+Each turn: up to 3 rolls, hold dice in between, then enter the result in any free field of one of
+your columns (a 0 strikes the field). "Served" means thrown with the first roll.
 
-# yarn
-yarn preview
+| Field | Points | Served |
+|---|---|---|
+| 1–6 | count × face | – |
+| Straight | 20 | 25 |
+| Full house | 30 | 35 |
+| Poker (4 of a kind) | 40 | 45 |
+| Grande (5 of a kind) | 50 | 80 |
+| Double grande | 100 | 120 |
 
-# bun
-bun run preview
-```
+Double grande needs a Grande in the same column first. Highest total over all columns wins.
+Rules live in `shared/game.ts`.
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Structure
+
+- `app/`: pages (home, lobby/game, stats, settings, login), components (3D scene, score sheet, lobby parts)
+- `server/game/`: lobby & game logic, physics simulation, socket setup, persistence
+- `server/db/`: Drizzle schema and SQL migrations
+- `shared/`: rules and types used by both client and server
+- `i18n/locales/`: translations

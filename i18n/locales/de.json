@@ -1,0 +1,202 @@
+{
+	"nav": {
+		"stats": "Statistik",
+		"settings": "Einstellungen",
+		"newLobby": "Neue Lobby",
+		"join": "Beitreten"
+	},
+	"common": {
+		"loading": "Lädt…",
+		"retry": "Erneut versuchen",
+		"toHome": "Zur Startseite",
+		"columns": "{n} Spalte | {n} Spalten"
+	},
+	"phase": {
+		"waiting": "Wartet",
+		"playing": "Läuft",
+		"finished": "Beendet"
+	},
+	"login": {
+		"title": "Willkommen bei Dice Poker",
+		"subtitle": "Melde dich an, um Lobbys zu erstellen und mit Freunden zu spielen.",
+		"google": "Mit Google anmelden",
+		"failed": "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.",
+		"devHint": "Nur in der Entwicklung: ohne Google als Testspieler anmelden.",
+		"devName": "Name des Testspielers",
+		"devLogin": "Anmelden"
+	},
+	"home": {
+		"hello": "Hallo {name}",
+		"intro": "Würfelpoker für 2–{max} Spieler. Erstelle eine Lobby oder tritt einer bei.",
+		"defaultLobbyName": "Tisch von {name}",
+		"createTitle": "Lobby erstellen",
+		"create": "Erstellen",
+		"joinTitle": "Lobby beitreten",
+		"join": "Beitreten",
+		"statsTitle": "Deine Statistik",
+		"statsDetails": "Details →",
+		"myGames": "Deine Spiele",
+		"playerCount": "{count}/{max} Spieler",
+		"yourTurn": "Du bist dran",
+		"continue": "Weiterspielen",
+		"open": "Öffnen",
+		"notice": {
+			"kicked": "Du wurdest aus der Lobby entfernt.",
+			"closed": "Der Host hat die Lobby aufgelöst."
+		},
+		"createText": "Lege Name, Passwort und Spaltenanzahl fest und lade Freunde ein.",
+		"joinText": "Du hast eine Lobby-ID und ein Passwort bekommen? Hier geht's rein.",
+		"spectator": "Zuschauer"
+	},
+	"fields": {
+		"lobbyName": "Name",
+		"password": "Passwort",
+		"columns": "Spalten",
+		"maxPlayers": "Max. Spieler",
+		"lobbyId": "Lobby-ID",
+		"die": "Würfel",
+		"column": "Spalte",
+		"name": "Name"
+	},
+	"lobby": {
+		"connecting": "Verbinde mit Lobby {id}…",
+		"notFoundTitle": "Lobby nicht gefunden",
+		"notFoundText": "Die Lobby {id} existiert nicht (mehr).",
+		"joinTitle": "Lobby {id} beitreten",
+		"copyInvite": "Einladungslink kopieren",
+		"copied": "Link kopiert!",
+		"leave": "Verlassen",
+		"leaveGameConfirm": "Wirklich das laufende Spiel verlassen? Deine Punkte werden entfernt.",
+		"close": "Lobby auflösen",
+		"closeConfirm": "Lobby wirklich auflösen? Alle Spieler werden entfernt.",
+		"players": "Spieler ({count}/{max})",
+		"host": "Host",
+		"you": "Du",
+		"kick": "Entfernen",
+		"start": "Spiel starten",
+		"minPlayers": "Mindestens {min} Spieler nötig.",
+		"waitForHost": "Warte, bis der Host das Spiel startet…",
+		"inviteTitle": "Freunde einladen",
+		"inviteText": "Teile den Link und das Passwort.",
+		"roll": "Würfeln",
+		"skip": "Zug überspringen",
+		"yourTurnTitle": "Du bist dran",
+		"strikeConfirm": "{field} in Spalte {column} streichen?",
+		"status": {
+			"rolling": "Die Würfel rollen…",
+			"yourTurnStart": "Du bist dran – würfle!",
+			"yourTurnHold": "Klicke Würfel zum Halten, würfle erneut oder trage dein Ergebnis ein.",
+			"yourTurnScore": "Trage dein Ergebnis in ein freies Feld ein.",
+			"offline": "{name} ist offline.",
+			"otherTurn": "{name} ist am Zug (Wurf {roll}/{max})."
+		},
+		"lastAction": {
+			"struck": "{name} streicht {field} (Spalte {column}).",
+			"scored": "{name}: {points} Punkt auf {field} (Spalte {column}) | {name}: {points} Punkte auf {field} (Spalte {column})",
+			"served": "serviert!"
+		},
+		"results": {
+			"youWon": "Du hast gewonnen!",
+			"winner": "{name} gewinnt!",
+			"tie": "Unentschieden!",
+			"newRound": "Neue Runde",
+			"newRoundHint": "Der Host kann eine neue Runde starten."
+		},
+		"notice": {
+			"playerLeft": "{name} hat die Lobby verlassen.",
+			"notEnoughPlayers": "Zu wenige Spieler – das Spiel wurde beendet.",
+			"abandoned": "Alle Spieler waren offline – das Spiel wurde abgebrochen."
+		},
+		"spectators": "Zuschauer ({count})",
+		"spectatorNote": "Du schaust zu. Sobald ein Platz frei ist, spielst du ab der nächsten Runde mit."
+	},
+	"tray": {
+		"held": "gehalten",
+		"die": "Würfel {n}",
+		"dieValue": "Würfel {n}: {value}"
+	},
+	"sheet": {
+		"total": "Gesamt",
+		"cellTitle": "{field} in Spalte {column}"
+	},
+	"categories": {
+		"ones": "Einser",
+		"twos": "Zweier",
+		"threes": "Dreier",
+		"fours": "Vierer",
+		"fives": "Fünfer",
+		"sixes": "Sechser",
+		"fullHouse": "Full House",
+		"street": "Straße",
+		"poker": "Poker",
+		"grande": "Grande",
+		"doubleGrande": "Doppel-Grande"
+	},
+	"stats": {
+		"title": "Statistik",
+		"games": "Spiele",
+		"wins": "Siege",
+		"winRate": "Siegquote",
+		"best": "Bestes Ergebnis",
+		"bestShort": "Best",
+		"average": "Ø Punkte",
+		"recent": "Letzte Spiele",
+		"date": "Datum",
+		"lobby": "Lobby",
+		"rank": "Platz",
+		"points": "Punkte",
+		"win": "Sieg",
+		"rankOf": "{rank}. / {count}",
+		"noGames": "Noch keine beendeten Spiele.",
+		"leaderboard": "Bestenliste",
+		"player": "Spieler",
+		"rate": "Quote",
+		"noEntries": "Noch keine Einträge."
+	},
+	"settings": {
+		"title": "Einstellungen",
+		"profile": "Profil",
+		"displayName": "Anzeigename",
+		"save": "Speichern",
+		"saved": "Gespeichert.",
+		"language": "Sprache",
+		"account": "Konto",
+		"loggedInAs": "Angemeldet als {name}",
+		"logout": "Abmelden"
+	},
+	"errors": {
+		"INTERNAL": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+		"TIMEOUT": "Der Server antwortet nicht.",
+		"fieldMissing": "{field} fehlt.",
+		"fieldTooLong": "{field} ist zu lang (max. {max} Zeichen).",
+		"fieldRange": "{field} muss zwischen {min} und {max} liegen.",
+		"NOT_FOUND": "Lobby nicht gefunden.",
+		"NOT_MEMBER": "Du bist kein Mitglied dieser Lobby.",
+		"NOT_IN_GAME": "Du spielst in dieser Runde nicht mit.",
+		"HOST_ONLY": "Nur der Host darf das.",
+		"NO_GAME": "Es läuft kein Spiel.",
+		"NOT_YOUR_TURN": "Du bist nicht am Zug.",
+		"STILL_ROLLING": "Die Würfel rollen noch.",
+		"WRONG_PASSWORD": "Falsches Passwort.",
+		"ALREADY_STARTED": "Das Spiel läuft bereits.",
+		"INVALID_PLAYER": "Ungültiger Spieler.",
+		"MIN_PLAYERS": "Mindestens {min} Spieler nötig.",
+		"NO_ROLLS_LEFT": "Keine Würfe mehr – trage dein Ergebnis ein.",
+		"ALL_HELD": "Alle Würfel sind gehalten.",
+		"CANNOT_HOLD": "Halten ist gerade nicht möglich.",
+		"MUST_ROLL_FIRST": "Du musst zuerst würfeln.",
+		"UNKNOWN_FIELD": "Unbekanntes Feld.",
+		"FIELD_TAKEN": "Dieses Feld ist schon belegt.",
+		"ONLY_OFFLINE_SKIP": "Nur Spieler, die offline sind, können übersprungen werden.",
+		"ONLY_IN_WAITING_ROOM": "Das geht nur im Warteraum."
+	},
+	"notFound": {
+		"title": "Seite nicht gefunden",
+		"text": "Diese Seite gibt es nicht."
+	},
+	"gameBar": {
+		"playing": "Laufendes Spiel: {name}",
+		"watching": "Du schaust zu: {name}",
+		"back": "Zurück zum Spiel"
+	}
+}

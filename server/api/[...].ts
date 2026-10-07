@@ -1,10 +1,6 @@
-import type { H3Event } from "h3";
-import {initSocket} from "~~/server";
-const router = createRouter();
+import { handleSocketRequest, SOCKET_PATH } from "../game/socket";
 
-router.get(
-    "/socket.io",
-    defineEventHandler((event: H3Event) => initSocket(event)),
-);
-
-export default useBase("/api", router.handler);
+export default defineEventHandler((event) => {
+	if (event.path.startsWith(SOCKET_PATH)) return handleSocketRequest(event);
+	throw createError({ statusCode: 404, statusMessage: "Not Found" });
+});

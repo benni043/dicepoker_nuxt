@@ -1,408 +1,189 @@
-<template>
-  <DataTableComponent :data-column-player="list"></DataTableComponent>
-
-  <div class="dice-container">
-    <canvas ref="canvas" />
-
-    <button @click="throwDice" :disabled="rolling">Würfeln</button>
-
-    <div v-if="diceResults.length > 0 && !rolling" class="results">
-      <p>Gewürfelte Werte: {{ diceResults.join(", ") }}</p>
-    </div>
-    <div v-else-if="rolling" class="rolling-status">
-      <p>Würfel rollen...</p>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-let p1: Player = { uuid: "0000", name: "Player 1" };
-let p2: Player = { uuid: "0001", name: "Player 2" };
+	import { MAX_PLAYERS } from "#shared/game";
+	import type { LobbySummary, PlayerStats } from "#shared/types";
 
-let dataColumn: DataColumn = {
-  ones: 0,
-  twos: 0,
-  threes: 0,
-  fours: 0,
-  fives: 0,
-  sixes: 0,
-  fullHouse: 10,
-  street: 0,
-  poker: 0,
-  grande: 0,
-  doubleGrande: 0,
-};
+	const { call } = useGame();
+	const { user } = useUserSession();
+	const localePath = useLocalePath();
+	const { read } = useLocalizedQuery();
 
-let dataColumn2: DataColumn = {
-  ones: 1,
-  twos: 2,
-  threes: 3,
-  fours: 0,
-  fives: 0,
-  sixes: 0,
-  fullHouse: 10,
-  street: 0,
-  poker: 0,
-  grande: 0,
-  doubleGrande: 0,
-};
+	const notice = computed(() => {
+		const value = read("notice");
+		return value === "kicked" || value === "closed" ? value : "";
+	});
+	const myLobbies = ref<LobbySummary[]>([]);
+	const stats = ref<PlayerStats | null>(null);
 
-let dataColumnPlayer1: DataColumnPlayer = {
-  player: p1,
-  dataColumns: [dataColumn, dataColumn2],
-};
-
-let dataColumnPlayer2: DataColumnPlayer = {
-  player: p2,
-  dataColumns: [dataColumn2, dataColumn],
-};
-
-let list = [dataColumnPlayer1, dataColumnPlayer2];
-
-import { ref, onMounted, onBeforeUnmount } from "vue";
-import * as THREE from "three";
-import { io } from "socket.io-client";
-import { useSound } from "@vueuse/sound";
-import diceSfx from "../assets/sounds/dice_rolling.mp3";
-
-// --- Reactive State ---
-const canvas = ref(null);
-const diceResults = ref([]);
-const rolling = ref(false);
-
-// --- Sound Effect ---
-const { play } = useSound(diceSfx);
-
-// --- Three.js Variables ---
-let scene: THREE.Scene;
-let camera: THREE.PerspectiveCamera;
-let renderer: THREE.WebGLRenderer;
-const diceMeshes: THREE.Mesh[] = []; // Array to hold Three.js meshes (visual dice)
-
-const socket = io("/lobby", {
-  path: "/api/socket.io",
-});
-
-const numDice = 5;
-const fieldRadius = 2.5;
-const diceSize = 0.5;
-
-/**
- * Creates an array of MeshStandardMaterial, one for each face of a die (1-6).
- * Each material has a CanvasTexture with the appropriate number of dots.
- */
-function createDiceMaterial(): THREE.MeshStandardMaterial[] {
-  const materials = [];
-  const size = 512; // Canvas resolution for the dot textures
-  const radius = 40; // Radius of each dot on the die face
-
-  // Pre-calculated pixel positions for dots on the canvas
-  const positions = {
-    center: [size / 2, size / 2],
-    topLeft: [size / 4, size / 4],
-    topRight: [(3 * size) / 4, size / 4],
-    middleLeft: [size / 4, size / 2],
-    middleRight: [(3 * size) / 4, size / 2],
-    bottomLeft: [size / 4, (3 * size) / 4],
-    bottomRight: [(3 * size) / 4, (3 * size) / 4],
-  };
-
-  // Maps the index of the materials array (which corresponds to a specific face of
-  // THREE.BoxGeometry: +X, -X, +Y, -Y, +Z, -Z) to the dot pattern for the
-  // correct die face number.
-  // The order is:
-  // 0: +X (Right) -> Should show Face 3
-  // 1: -X (Left)  -> Should show Face 4
-  // 2: +Y (Top)   -> Should show Face 1
-  // 3: -Y (Bottom)-> Should show Face 6
-  // 4: +Z (Front) -> Should show Face 2
-  // 5: -Z (Back)  -> Should show Face 5
-  const dotsMap = [
-    // Face 3 (+X)
-    [positions.topLeft, positions.center, positions.bottomRight],
-    // Face 4 (-X)
-    [
-      positions.topLeft,
-      positions.topRight,
-      positions.bottomLeft,
-      positions.bottomRight,
-    ],
-    // Face 1 (+Y)
-    [positions.center],
-    // Face 6 (-Y)
-    [
-      positions.topLeft,
-      positions.topRight,
-      positions.middleLeft,
-      positions.middleRight,
-      positions.bottomLeft,
-      positions.bottomRight,
-    ],
-    // Face 2 (+Z)
-    [positions.topLeft, positions.bottomRight],
-    // Face 5 (-Z)
-    [
-      positions.topLeft,
-      positions.topRight,
-      positions.center,
-      positions.bottomLeft,
-      positions.bottomRight,
-    ],
-  ];
-
-  // Generate a canvas texture for each of the six faces
-  for (let i = 0; i < 6; i++) {
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-
-    // Fill the background of the face with white
-    ctx!.fillStyle = "white";
-    ctx!.fillRect(0, 0, size, size);
-
-    // Draw black dots according to the current face's pattern
-    ctx!.fillStyle = "black";
-    const dots = dotsMap[i];
-
-    dots!.forEach(([x, y]) => {
-      ctx!.beginPath();
-      ctx!.arc(x!, y!, radius, 0, 2 * Math.PI);
-      ctx!.fill();
-    });
-
-    // Create a Three.js texture from the canvas and set filtering
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-
-    // Create and store the material for this face
-    materials.push(new THREE.MeshStandardMaterial({ map: texture }));
-  }
-
-  return materials;
-}
-
-/**
- * Initializes the Three.js scene, camera, renderer, and visual elements.
- * No Cannon.js physics here as it's handled by the backend.
- */
-function init() {
-  // --- Three.js Setup ---
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x228b22); // Green table background
-
-  camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-  camera.position.set(0, 5, 3); // Position camera above the field
-  camera.lookAt(0, 0, 0); // Point camera towards the center of the field
-
-  renderer = new THREE.WebGLRenderer({
-    canvas: canvas.value!,
-    antialias: true,
-  });
-  renderer.setSize(500, 500); // Fixed size for the display canvas
-  renderer.setPixelRatio(window.devicePixelRatio); // For better quality on high-res screens
-
-  // --- Lighting ---
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(5, 10, 5).normalize(); // Light from top-right-front
-  scene.add(light);
-
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft ambient light
-  scene.add(ambientLight);
-
-  // --- Create Dice (Visual Only) ---
-  const diceMaterials = createDiceMaterial(); // Get the pre-generated face materials
-
-  for (let i = 0; i < numDice; i++) {
-    // Create Three.js mesh for visual representation
-    const geometry = new THREE.BoxGeometry(diceSize, diceSize, diceSize); // Size of the die
-    const mesh = new THREE.Mesh(geometry, diceMaterials);
-    // Set initial position - these will be updated by server data
-    mesh.position.set(
-      (i - (numDice - 1) / 2) * diceSize * 1.5,
-      diceSize / 2,
-      fieldRadius - diceSize * 1.5
-    );
-    scene.add(mesh);
-    diceMeshes.push(mesh);
-  }
-
-  // --- Add Visual Walls (to match backend's physics boundaries) ---
-  addVisualWall(0, 0.5, -fieldRadius, 0); // Back visual wall
-  addVisualWall(0, 0.5, fieldRadius, Math.PI); // Front visual wall
-  addVisualWall(-fieldRadius, 0.5, 0, Math.PI / 2); // Left visual wall
-  addVisualWall(fieldRadius, 0.5, 0, -Math.PI / 2); // Right visual wall
-
-  animate(); // Start the rendering loop
-}
-
-/**
- * Adds a visible wall mesh to the Three.js scene.
- * @param {number} x X position of the visual wall.
- * @param {number} y Y position of the visual wall.
- * @param {number} z Z position of the visual wall.
- * @param {number} rotY Y rotation (Euler angle) of the visual wall.
- */
-function addVisualWall(x: number, y: number, z: number, rotY: number) {
-  const wallLength = fieldRadius * 2; // Length of the wall
-  const wallHeight = 1; // Height of the wall
-  const wallThickness = 0.1; // Thickness of the wall
-
-  const geometry = new THREE.BoxGeometry(wallLength, wallHeight, wallThickness);
-  const material = new THREE.MeshStandardMaterial({ color: 0x654321 }); // Brown color
-  const mesh = new THREE.Mesh(geometry, material);
-
-  mesh.position.set(x, y, z);
-  mesh.rotation.y = rotY; // Rotate to align with the physics walls
-
-  scene.add(mesh);
-}
-
-/**
- * Initiates the dice throw by emitting a socket event to the backend.
- */
-function throwDice() {
-  if (rolling.value) return; // Prevent multiple throws while already rolling
-
-  rolling.value = true; // Indicate that dice are rolling
-  diceResults.value = []; // Clear previous results display
-
-  // Only emit the event to the server; the server handles the physics.
-  socket.emit("throwDice");
-}
-
-/**
- * The main animation loop. Only renders the scene based on received data.
- * No physics simulation or settling checks here.
- */
-function animate() {
-  requestAnimationFrame(animate); // Request the next frame for continuous animation
-  renderer.render(scene, camera); // Render the current state of the scene
-}
-
-// --- Lifecycle Hooks and Socket.IO Event Handlers ---
-onMounted(() => {
-  init();
-
-  socket.on("connect", () => {
-    console.log("Connected to server via Socket.IO");
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Disconnected from server");
-  });
-
-  // Listener for dice state updates from the server
-  socket.on("diceStateUpdate", (diceStates) => {
-    // Synchronize the positions and rotations of Three.js meshes
-    diceStates.forEach((state: any, index: number) => {
-      if (diceMeshes[index]) {
-        diceMeshes[index].position.set(
-          state.position.x,
-          state.position.y,
-          state.position.z
-        );
-        // Important: use THREE.Quaternion for the mesh
-        diceMeshes[index].quaternion.set(
-          state.quaternion.x,
-          state.quaternion.y,
-          state.quaternion.z,
-          state.quaternion.w
-        );
-      }
-    });
-  });
-
-  // Listener for final dice results from the server
-  socket.on("diceResult", (results) => {
-    console.log("Received final results:", results);
-    diceResults.value = results.individual; // Update array of individual results
-    rolling.value = false; // Dice have settled
-
-    // Play sound effect
-    // play();
-  });
-});
-
-onBeforeUnmount(() => {
-  socket.disconnect();
-
-  // Dispose Three.js objects to prevent memory leaks if necessary for more complex scenes
-  if (renderer) renderer.dispose();
-});
+	onMounted(async () => {
+		const [mine, s] = await Promise.all([
+			call<{ lobbies: LobbySummary[] }>("lobby:mine"),
+			call<{ me: PlayerStats | null }>("stats:get"),
+		]);
+		myLobbies.value = mine.lobbies;
+		stats.value = s.me;
+	});
 </script>
 
+<template>
+	<div class="home">
+		<p v-if="notice" class="notice">{{ $t(`home.notice.${notice}`) }}</p>
+
+		<section class="hero">
+			<h1>{{ $t("home.hello", { name: user?.name }) }} 👋</h1>
+			<p class="muted">{{ $t("home.intro", { max: MAX_PLAYERS }) }}</p>
+		</section>
+
+		<div class="grid">
+			<NuxtLink :to="localePath('lobby-new')" class="card action">
+				<span class="action-icon">＋</span>
+				<h2>{{ $t("home.createTitle") }}</h2>
+				<p class="muted">{{ $t("home.createText") }}</p>
+			</NuxtLink>
+
+			<NuxtLink :to="localePath('join')" class="card action">
+				<span class="action-icon">→</span>
+				<h2>{{ $t("home.joinTitle") }}</h2>
+				<p class="muted">{{ $t("home.joinText") }}</p>
+			</NuxtLink>
+
+			<div class="card">
+				<div class="card-head">
+					<h2>{{ $t("home.statsTitle") }}</h2>
+					<NuxtLink :to="localePath('stats')" class="small">{{
+						$t("home.statsDetails")
+					}}</NuxtLink>
+				</div>
+				<div v-if="stats" class="stat-tiles">
+					<div class="stat-tile">
+						<div class="value">{{ stats.games }}</div>
+						<div class="label">{{ $t("stats.games") }}</div>
+					</div>
+					<div class="stat-tile">
+						<div class="value">{{ stats.wins }}</div>
+						<div class="label">{{ $t("stats.wins") }}</div>
+					</div>
+					<div class="stat-tile">
+						<div class="value">
+							{{
+								stats.games ? Math.round((stats.wins / stats.games) * 100) : 0
+							}}%
+						</div>
+						<div class="label">{{ $t("stats.winRate") }}</div>
+					</div>
+				</div>
+				<p v-else class="muted">{{ $t("common.loading") }}</p>
+			</div>
+		</div>
+
+		<section v-if="myLobbies.length" class="card mine">
+			<h2>{{ $t("home.myGames") }}</h2>
+			<ul>
+				<li v-for="l in myLobbies" :key="l.id">
+					<div>
+						<strong>{{ l.name }}</strong>
+						<span class="muted small">
+							· <code>{{ l.id }}</code> ·
+							{{
+								$t("home.playerCount", { count: l.players, max: l.maxPlayers })
+							}}
+							·
+							{{ $t("common.columns", l.columns) }}
+						</span>
+					</div>
+					<div class="mine-actions">
+						<span v-if="l.myTurn" class="badge badge-green">{{
+							$t("home.yourTurn")
+						}}</span>
+						<span v-if="l.role === 'spectator'" class="badge badge-muted"
+							>👁 {{ $t("home.spectator") }}</span
+						>
+						<span class="badge badge-muted">{{ $t(`phase.${l.phase}`) }}</span>
+						<NuxtLink
+							:to="localePath({ name: 'lobby-id', params: { id: l.id } })"
+							class="btn"
+						>
+							{{
+								l.phase === "playing" ? $t("home.continue") : $t("home.open")
+							}}
+						</NuxtLink>
+					</div>
+				</li>
+			</ul>
+		</section>
+	</div>
+</template>
+
 <style scoped>
-.dice-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background-color: #f0f0f0;
-  font-family: sans-serif;
-  color: #333;
-}
-
-canvas {
-  border: 2px solid #555;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  width: 500px; /* Fixed width */
-  height: 500px; /* Fixed height */
-  margin-bottom: 20px;
-}
-
-button {
-  padding: 12px 25px;
-  font-size: 1.2em;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.1s ease;
-}
-
-button:hover:not(:disabled) {
-  background-color: #45a049;
-  transform: translateY(-2px);
-}
-
-button:active:not(:disabled) {
-  background-color: #3e8e41;
-  transform: translateY(0);
-}
-
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.results {
-  margin-top: 20px;
-  padding: 15px 30px;
-  background-color: #e0e0e0;
-  border-radius: 8px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.results p {
-  margin: 5px 0;
-  font-size: 1.1em;
-}
-
-.results .total {
-  font-weight: bold;
-  font-size: 1.3em;
-  color: #007bff;
-}
-
-.rolling-status {
-  margin-top: 20px;
-  font-size: 1.1em;
-  color: #666;
-}
+	.notice {
+		background: rgba(251, 191, 36, 0.1);
+		border: 1px solid rgba(251, 191, 36, 0.35);
+		color: var(--gold);
+		border-radius: var(--radius);
+		padding: 0.7rem 1rem;
+		margin: 0 0 1.25rem;
+	}
+	.hero {
+		margin-bottom: 1.5rem;
+	}
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 1.25rem;
+		align-items: stretch;
+	}
+	.action {
+		color: var(--text);
+		transition:
+			border-color 0.15s,
+			transform 0.15s;
+	}
+	.action:hover {
+		border-color: var(--accent);
+		transform: translateY(-2px);
+	}
+	.action p {
+		margin: 0;
+	}
+	.action-icon {
+		display: grid;
+		place-items: center;
+		width: 42px;
+		height: 42px;
+		border-radius: 10px;
+		background: rgba(74, 222, 128, 0.12);
+		color: var(--accent);
+		font-size: 1.4rem;
+		font-weight: 800;
+		margin-bottom: 0.75rem;
+	}
+	.card-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+	}
+	.mine {
+		margin-top: 1.25rem;
+	}
+	.mine ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.mine li {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+		padding: 0.75rem 0;
+		border-bottom: 1px solid var(--border);
+	}
+	.mine li:last-child {
+		border-bottom: none;
+	}
+	.mine-actions {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
 </style>
