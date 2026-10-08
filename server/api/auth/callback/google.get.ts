@@ -1,4 +1,3 @@
-import { localizedQuery } from "#shared/query";
 import { upsertGoogleUser } from "../../../game/store";
 
 const handler = defineOAuthGoogleEventHandler({
@@ -15,10 +14,10 @@ const handler = defineOAuthGoogleEventHandler({
 	},
 	onError(event, error) {
 		console.error("[auth] Google login failed", error);
-		const query = new URLSearchParams(
-			localizedQuery(requestLocale(event), { error: "google" }),
+		return sendRedirect(
+			event,
+			`${localizedPath(event, "/login")}?error=google`,
 		);
-		return sendRedirect(event, `${localizedPath(event, "/login")}?${query}`);
 	},
 });
 

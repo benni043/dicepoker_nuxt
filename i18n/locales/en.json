@@ -27,7 +27,7 @@
 	},
 	"home": {
 		"hello": "Hi {name}",
-		"intro": "Dice poker for 2–{max} players. Create a lobby or join one.",
+		"intro": "Create a lobby or join one.",
 		"defaultLobbyName": "{name}'s table",
 		"createTitle": "Create lobby",
 		"create": "Create",
@@ -44,7 +44,7 @@
 			"kicked": "You were removed from the lobby.",
 			"closed": "The host closed the lobby."
 		},
-		"createText": "Pick a name, password and number of columns, then invite friends.",
+		"createText": "Pick a gametype, set password and number of columns, and let's start.",
 		"joinText": "Got a lobby ID and password? Jump in here.",
 		"spectator": "Spectator"
 	},
@@ -222,8 +222,8 @@
 		"doubleGrande": "DG",
 		"threeOfKind": "3K",
 		"fourOfKind": "4K",
-		"smallStraight": "SS",
-		"largeStraight": "LS",
+		"smallStraight": "s. St",
+		"largeStraight": "b. St",
 		"chance": "Ch"
 	},
 	"rules": {

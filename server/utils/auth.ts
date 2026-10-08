@@ -13,14 +13,8 @@ export function requestLocale(event: H3Event): string {
 	return header && LOCALES.includes(header) ? header : DEFAULT_LOCALE;
 }
 
-const PAGE_PATHS: Record<string, Record<string, string>> = {
-	"/login": { de: "/anmelden", en: "/login" },
-};
-
 export function localizedPath(event: H3Event, path: string): string {
-	const locale = requestLocale(event);
-	const translated = PAGE_PATHS[path]?.[locale] ?? path;
-	return `/${locale}${translated === "/" ? "" : translated}`;
+	return `/${requestLocale(event)}${path === "/" ? "" : path}`;
 }
 
 export function safeRedirect(event: H3Event, path: unknown): string {

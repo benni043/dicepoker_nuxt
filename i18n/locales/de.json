@@ -17,7 +17,7 @@
 		"finished": "Beendet"
 	},
 	"login": {
-		"title": "Willkommen bei Dice Poker",
+		"title": "Willkommen bei Würfelpoker",
 		"subtitle": "Melde dich an, um Lobbys zu erstellen und mit Freunden zu spielen.",
 		"google": "Mit Google anmelden",
 		"failed": "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.",
@@ -27,7 +27,7 @@
 	},
 	"home": {
 		"hello": "Hallo {name}",
-		"intro": "Würfelpoker für 2–{max} Spieler. Erstelle eine Lobby oder tritt einer bei.",
+		"intro": "Erstelle eine Lobby oder tritt einer bei.",
 		"defaultLobbyName": "Tisch von {name}",
 		"createTitle": "Lobby erstellen",
 		"create": "Erstellen",
@@ -44,7 +44,7 @@
 			"kicked": "Du wurdest aus der Lobby entfernt.",
 			"closed": "Der Host hat die Lobby aufgelöst."
 		},
-		"createText": "Lege Name, Passwort und Spaltenanzahl fest und lade Freunde ein.",
+		"createText": "Wählt einen Spieltyp, legt Passwort und Spaltenanzahl fest und spielt drauf los.",
 		"joinText": "Du hast eine Lobby-ID und ein Passwort bekommen? Hier geht's rein.",
 		"spectator": "Zuschauer"
 	},
@@ -222,8 +222,8 @@
 		"doubleGrande": "DG",
 		"threeOfKind": "3P",
 		"fourOfKind": "4P",
-		"smallStraight": "kS",
-		"largeStraight": "gS",
+		"smallStraight": "k. St",
+		"largeStraight": "g. St",
 		"chance": "Ch"
 	},
 	"rules": {

@@ -18,9 +18,8 @@
 	const { socket, meId, connected, call } = useGame();
 	const { t } = useI18n();
 	const localePath = useLocalePath();
-	const { query: localQuery } = useLocalizedQuery();
 	const home = (notice?: "kicked" | "closed") =>
-		router.push(localePath({ name: "index", query: localQuery({ notice }) }));
+		router.push(localePath({ name: "index", query: notice ? { notice } : {} }));
 	const errorText = useErrorText();
 	const { play: playDiceSound } = useSound(diceSfx, { volume: 0.5 });
 
@@ -36,6 +35,14 @@
 	const copied = ref(false);
 	const toast = ref("");
 	const sceneRef = ref<InstanceType<typeof DiceScene> | null>(null);
+	const boardRef = ref<HTMLElement | null>(null);
+	const sheetRef = ref<HTMLElement | null>(null);
+
+	const isSingleColumn = () => window.matchMedia("(max-width: 1023px)").matches;
+	function scrollTo(el: HTMLElement | null) {
+		if (el && isSingleColumn())
+			el.scrollIntoView({ behavior: "smooth", block: "start" });
+	}
 	let rollingFallback: ReturnType<typeof setTimeout> | undefined;
 	let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -261,6 +268,8 @@
 	function onSettled() {
 		clearTimeout(rollingFallback);
 		rolling.value = false;
+		if (isMyTurn.value && rollCount.value >= MAX_ROLLS)
+			scrollTo(sheetRef.value);
 	}
 
 	function onNotice(notice: LobbyNotice) {
@@ -294,6 +303,7 @@
 		document.title = mine
 			? `▶ ${t("lobby.yourTurnTitle")} – Dice Poker`
 			: "Dice Poker";
+		if (mine) nextTick(() => scrollTo(boardRef.value));
 	});
 
 	onBeforeUnmount(() => {
@@ -363,31 +373,37 @@
 		</div>
 
 		<template v-else-if="state">
-			<header class="mb-4 flex flex-wrap items-start justify-between gap-4">
-				<div>
-					<h1 class="mb-0.5">{{ state.name }}</h1>
-					<p class="text-sm text-muted">
-						ID <code>{{ state.id }}</code> ·
-						{{ $t(`rules.${state.ruleset}.name`) }} ·
-						{{ $t("common.columns", state.columns) }} ·
-						<button type="button" class="link" @click="copyInvite">
-							{{ copied ? $t("lobby.copied") : $t("lobby.copyInvite") }}
-						</button>
-					</p>
-				</div>
-				<div class="flex flex-wrap gap-2">
+			<header
+				class="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1"
+			>
+				<h1 class="mb-0 text-xl wrap-break-word sm:text-[1.6rem]">
+					{{ state.name }}
+				</h1>
+				<div class="flex gap-2">
 					<button
 						v-if="isHost && state.phase === 'waiting'"
 						type="button"
-						class="btn btn-ghost text-danger"
+						class="btn btn-ghost px-3 py-1.5 text-sm text-danger"
 						@click="closeLobby"
 					>
 						{{ $t("lobby.close") }}
 					</button>
-					<button type="button" class="btn btn-ghost" @click="leave">
+					<button
+						type="button"
+						class="btn btn-ghost px-3 py-1.5 text-sm"
+						@click="leave"
+					>
 						{{ $t("lobby.leave") }}
 					</button>
 				</div>
+				<p class="col-span-2 text-sm text-muted">
+					ID <code>{{ state.id }}</code> ·
+					{{ $t(`rules.${state.ruleset}.name`) }} ·
+					{{ $t("common.columns", state.columns) }} ·
+					<button type="button" class="link" @click="copyInvite">
+						{{ copied ? $t("lobby.copied") : $t("lobby.copyInvite") }}
+					</button>
+				</p>
 			</header>
 
 			<p v-if="actionError" class="my-2 text-danger">{{ actionError }}</p>
@@ -412,7 +428,10 @@
 				v-else-if="game"
 				class="grid grid-cols-1 items-start gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-stretch"
 			>
-				<div class="flex flex-col gap-3.5 lg:min-h-0">
+				<div
+					ref="boardRef"
+					class="flex scroll-mt-[calc(var(--spacing-header)+0.75rem)] flex-col gap-3.5 lg:min-h-0"
+				>
 					<LobbyPlayersBar
 						:players="orderedPlayers"
 						:spectators="state.spectators"
@@ -490,7 +509,10 @@
 					</p>
 				</div>
 
-				<div class="card p-3 lg:min-h-0 lg:overflow-auto">
+				<div
+					ref="sheetRef"
+					class="card scroll-mt-[calc(var(--spacing-header)+0.75rem)] p-3 lg:min-h-0 lg:overflow-auto"
+				>
 					<ScoreSheet
 						:players="roundPlayers"
 						:ruleset="state.ruleset"

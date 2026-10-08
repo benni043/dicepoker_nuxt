@@ -1,5 +1,4 @@
 import { io, type Socket } from "socket.io-client";
-import { localizedQuery } from "#shared/query";
 
 export class GameRequestError extends Error {
 	constructor(
@@ -33,11 +32,9 @@ function ensureSocket() {
 		const session = useUserSession();
 		await session.fetch();
 		if (!session.loggedIn.value) {
-			const { $localePath, $router, $i18n } = useNuxtApp();
-			const query = localizedQuery($i18n.locale.value, {
-				redirect: $router.currentRoute.value.fullPath,
-			});
-			await navigateTo($localePath({ name: "login", query }));
+			const { $localePath, $router } = useNuxtApp();
+			const redirect = $router.currentRoute.value.fullPath;
+			await navigateTo($localePath({ name: "login", query: { redirect } }));
 		} else setTimeout(() => socket?.connect(), 2000);
 	});
 	return socket;

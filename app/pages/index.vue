@@ -5,10 +5,10 @@
 	const { call } = useGame();
 	const { user } = useUserSession();
 	const localePath = useLocalePath();
-	const { read } = useLocalizedQuery();
+	const route = useRoute();
 
 	const notice = computed(() => {
-		const value = read("notice");
+		const value = queryString(route.query.notice);
 		return value === "kicked" || value === "closed" ? value : "";
 	});
 	const myLobbies = ref<LobbySummary[]>([]);

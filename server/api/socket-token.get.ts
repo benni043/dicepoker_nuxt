@@ -2,10 +2,14 @@ import { getUser } from "../game/store";
 import { createSocketToken } from "../game/token";
 
 export default defineEventHandler(async (event) => {
-	const { user } = await requireUserSession(event);
-	if (!(await getUser(user.id))) {
+	const session = await requireUserSession(event);
+	if (!(await getUser(session.user.id))) {
 		await clearUserSession(event);
 		throw createError({ statusCode: 401, statusMessage: "Unauthorized" });
 	}
-	return { token: createSocketToken(user.id) };
+	await replaceUserSession(event, {
+		user: session.user,
+		loggedInAt: session.loggedInAt,
+	});
+	return { token: createSocketToken(session.user.id) };
 });

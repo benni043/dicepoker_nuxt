@@ -1,11 +1,11 @@
 <script setup lang="ts">
 	const { call } = useGame();
-	const { read } = useLocalizedQuery();
+	const route = useRoute();
 	const localePath = useLocalePath();
 	const errorText = useErrorText();
 
 	const form = reactive({
-		lobbyId: read("id")?.toUpperCase() ?? "",
+		lobbyId: queryString(route.query.id)?.toUpperCase() ?? "",
 		password: "",
 	});
 	const error = ref("");

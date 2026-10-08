@@ -1,11 +1,13 @@
 <script setup lang="ts">
 	const localePath = useLocalePath();
-	const { read } = useLocalizedQuery();
+	const route = useRoute();
 	const isDev = import.meta.dev;
 	const devName = ref("");
 
-	const redirect = computed(() => read("redirect") ?? localePath("index"));
-	const failed = computed(() => !!read("error"));
+	const redirect = computed(
+		() => queryString(route.query.redirect) ?? localePath("index"),
+	);
+	const failed = computed(() => !!route.query.error);
 	const googleUrl = computed(
 		() =>
 			`/api/auth/callback/google?redirect=${encodeURIComponent(redirect.value)}`,

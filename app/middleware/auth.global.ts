@@ -1,5 +1,3 @@
-import { localizedQuery, readLocalizedQuery } from "#shared/query";
-
 export default defineNuxtRouteMiddleware((to) => {
 	const { loggedIn } = useUserSession();
 	const localePath = useLocalePath();
@@ -8,9 +6,7 @@ export default defineNuxtRouteMiddleware((to) => {
 
 	if (routeName === "login") {
 		if (loggedIn.value)
-			return navigateTo(
-				readLocalizedQuery(to.query, "redirect") ?? localePath("index"),
-			);
+			return navigateTo(queryString(to.query.redirect) ?? localePath("index"));
 		return;
 	}
 	if (!loggedIn.value) {
@@ -18,10 +14,7 @@ export default defineNuxtRouteMiddleware((to) => {
 		const locale =
 			$i18n.localeCodes.value.find((code) => code === prefix) ??
 			$i18n.locale.value;
-		const query =
-			routeName === "index"
-				? {}
-				: localizedQuery(locale, { redirect: to.fullPath });
+		const query = routeName === "index" ? {} : { redirect: to.fullPath };
 		return navigateTo(localePath({ name: "login", query }, locale));
 	}
 });

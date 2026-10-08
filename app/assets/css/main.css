@@ -39,6 +39,7 @@
 @layer base {
 	:root {
 		color-scheme: dark;
+		touch-action: manipulation;
 	}
 
 	body {

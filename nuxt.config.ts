@@ -16,19 +16,13 @@ export default defineNuxtConfig({
 	runtimeConfig: {
 		databaseUrl: "",
 		migrationsDir: "",
+		session: {
+			maxAge: 60 * 60 * 24 * 30,
+		},
 	},
 	i18n: {
 		defaultLocale: "de",
 		strategy: "prefix",
-		customRoutes: "config",
-		pages: {
-			login: { de: "/anmelden", en: "/login" },
-			stats: { de: "/statistik", en: "/stats" },
-			settings: { de: "/einstellungen", en: "/settings" },
-			join: { de: "/beitreten", en: "/join" },
-			"lobby/new": { de: "/lobby/neu", en: "/lobby/new" },
-			"lobby/[id]": { de: "/lobby/[id]", en: "/lobby/[id]" },
-		},
 		locales: [
 			{ code: "de", language: "de-DE", name: "Deutsch", file: "de.json" },
 			{ code: "en", language: "en-US", name: "English", file: "en.json" },
