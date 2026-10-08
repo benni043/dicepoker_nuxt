@@ -14,7 +14,6 @@ export const users = pgTable("users", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	googleSub: text("google_sub").notNull().unique(),
 	email: text("email"),
-	/** Display name, editable in the settings. */
 	name: text("name").notNull(),
 	avatarUrl: text("avatar_url"),
 	createdAt: timestamp("created_at", { withTimezone: true })
@@ -25,7 +24,6 @@ export const users = pgTable("users", {
 		.defaultNow(),
 });
 
-/** Snapshot of a lobby (incl. running game) so games survive restarts. */
 export const lobbies = pgTable("lobbies", {
 	id: text("id").primaryKey(),
 	data: jsonb("data").notNull(),
@@ -38,6 +36,7 @@ export const games = pgTable("games", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	lobbyId: text("lobby_id").notNull(),
 	lobbyName: text("lobby_name").notNull(),
+	ruleset: text("ruleset").notNull().default("poker"),
 	columns: integer("columns").notNull(),
 	finishedAt: timestamp("finished_at", { withTimezone: true })
 		.notNull()

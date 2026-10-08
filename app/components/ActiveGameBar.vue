@@ -1,7 +1,6 @@
 <script setup lang="ts">
 	import type { LobbySummary } from "#shared/types";
 
-	// Shown on every page except the lobby itself while one of my games is running.
 	const { socket, connected, call } = useGame();
 	const route = useRoute();
 	const localePath = useLocalePath();
@@ -31,11 +30,10 @@
 				await call<{ lobbies: LobbySummary[] }>("lobby:mine")
 			).lobbies;
 		} catch {
-			// keep the last known list
+			return;
 		}
 	}
 
-	// Debounced: turn changes can arrive in quick succession.
 	function scheduleRefresh() {
 		clearTimeout(refreshTimer);
 		refreshTimer = setTimeout(refresh, 300);
@@ -52,15 +50,20 @@
 </script>
 
 <template>
-	<div v-if="running.length" class="game-bar">
+	<div
+		v-if="running.length"
+		class="sticky top-header z-9 border-b border-accent/30 bg-bar"
+	>
 		<div
 			v-for="l in running.slice(0, 2)"
 			:key="l.id"
-			class="game-bar-item"
-			:class="{ turn: l.myTurn }"
+			class="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-2 text-sm not-first:border-t not-first:border-accent/15 sm:px-6"
 		>
-			<span class="pulse" />
-			<span class="text">
+			<span
+				class="size-2 shrink-0 animate-pulse rounded-full"
+				:class="l.myTurn ? 'bg-gold' : 'bg-accent'"
+			/>
+			<span class="min-w-0 flex-1 truncate">
 				{{
 					l.inGame
 						? $t("gameBar.playing", { name: l.name })
@@ -72,64 +75,10 @@
 			}}</span>
 			<NuxtLink
 				:to="localePath({ name: 'lobby-id', params: { id: l.id } })"
-				class="btn btn-primary btn-sm"
+				class="btn btn-primary px-3 py-1 text-sm"
 			>
 				{{ $t("gameBar.back") }}
 			</NuxtLink>
 		</div>
 	</div>
 </template>
-
-<style scoped>
-	.game-bar {
-		position: sticky;
-		top: var(--header-h);
-		z-index: 9;
-		background: #10261a;
-		border-bottom: 1px solid rgba(74, 222, 128, 0.3);
-	}
-	.game-bar-item {
-		max-width: 1400px;
-		margin: 0 auto;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.45rem 1.5rem;
-		font-size: 0.9rem;
-	}
-	.game-bar-item + .game-bar-item {
-		border-top: 1px solid rgba(74, 222, 128, 0.15);
-	}
-	.text {
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.pulse {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: var(--accent);
-		flex-shrink: 0;
-		animation: pulse 1.6s infinite;
-	}
-	.turn .pulse {
-		background: var(--gold);
-	}
-	@keyframes pulse {
-		50% {
-			opacity: 0.3;
-		}
-	}
-	.btn-sm {
-		padding: 0.3rem 0.8rem;
-		font-size: 0.85rem;
-	}
-	@media (max-width: 600px) {
-		.game-bar-item {
-			padding: 0.45rem 1rem;
-		}
-	}
-</style>

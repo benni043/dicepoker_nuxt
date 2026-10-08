@@ -22,67 +22,76 @@
 		myLobbies.value = mine.lobbies;
 		stats.value = s.me;
 	});
+
+	const actionCard =
+		"card text-ink transition hover:-translate-y-0.5 hover:border-accent";
+	const actionIcon =
+		"mb-3 grid size-[42px] place-items-center rounded-[10px] bg-accent/12 text-[1.4rem] font-extrabold text-accent";
 </script>
 
 <template>
-	<div class="home">
-		<p v-if="notice" class="notice">{{ $t(`home.notice.${notice}`) }}</p>
+	<div>
+		<p
+			v-if="notice"
+			class="mb-5 rounded-xl border border-gold/35 bg-gold/10 px-4 py-3 text-gold"
+		>
+			{{ $t(`home.notice.${notice}`) }}
+		</p>
 
-		<section class="hero">
+		<section class="mb-6">
 			<h1>{{ $t("home.hello", { name: user?.name }) }} 👋</h1>
-			<p class="muted">{{ $t("home.intro", { max: MAX_PLAYERS }) }}</p>
+			<p class="text-muted">{{ $t("home.intro", { max: MAX_PLAYERS }) }}</p>
 		</section>
 
-		<div class="grid">
-			<NuxtLink :to="localePath('lobby-new')" class="card action">
-				<span class="action-icon">＋</span>
+		<div class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
+			<NuxtLink :to="localePath('lobby-new')" :class="actionCard">
+				<span :class="actionIcon">＋</span>
 				<h2>{{ $t("home.createTitle") }}</h2>
-				<p class="muted">{{ $t("home.createText") }}</p>
+				<p class="text-muted">{{ $t("home.createText") }}</p>
 			</NuxtLink>
 
-			<NuxtLink :to="localePath('join')" class="card action">
-				<span class="action-icon">→</span>
+			<NuxtLink :to="localePath('join')" :class="actionCard">
+				<span :class="actionIcon">→</span>
 				<h2>{{ $t("home.joinTitle") }}</h2>
-				<p class="muted">{{ $t("home.joinText") }}</p>
+				<p class="text-muted">{{ $t("home.joinText") }}</p>
 			</NuxtLink>
 
 			<div class="card">
-				<div class="card-head">
+				<div class="flex items-baseline justify-between">
 					<h2>{{ $t("home.statsTitle") }}</h2>
-					<NuxtLink :to="localePath('stats')" class="small">{{
-						$t("home.statsDetails")
-					}}</NuxtLink>
+					<NuxtLink :to="localePath('stats')" class="text-sm">
+						{{ $t("home.statsDetails") }}
+					</NuxtLink>
 				</div>
-				<div v-if="stats" class="stat-tiles">
-					<div class="stat-tile">
-						<div class="value">{{ stats.games }}</div>
-						<div class="label">{{ $t("stats.games") }}</div>
-					</div>
-					<div class="stat-tile">
-						<div class="value">{{ stats.wins }}</div>
-						<div class="label">{{ $t("stats.wins") }}</div>
-					</div>
-					<div class="stat-tile">
-						<div class="value">
-							{{
-								stats.games ? Math.round((stats.wins / stats.games) * 100) : 0
-							}}%
-						</div>
-						<div class="label">{{ $t("stats.winRate") }}</div>
-					</div>
+				<div
+					v-if="stats"
+					class="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3"
+				>
+					<StatTile :value="stats.games" :label="$t('stats.games')" />
+					<StatTile :value="stats.wins" :label="$t('stats.wins')" />
+					<StatTile
+						:value="`${stats.games ? Math.round((stats.wins / stats.games) * 100) : 0}%`"
+						:label="$t('stats.winRate')"
+					/>
 				</div>
-				<p v-else class="muted">{{ $t("common.loading") }}</p>
+				<p v-else class="text-muted">{{ $t("common.loading") }}</p>
 			</div>
 		</div>
 
-		<section v-if="myLobbies.length" class="card mine">
+		<section v-if="myLobbies.length" class="card mt-5">
 			<h2>{{ $t("home.myGames") }}</h2>
 			<ul>
-				<li v-for="l in myLobbies" :key="l.id">
+				<li
+					v-for="l in myLobbies"
+					:key="l.id"
+					class="flex flex-wrap items-center justify-between gap-4 border-b border-line py-3 last:border-b-0"
+				>
 					<div>
 						<strong>{{ l.name }}</strong>
-						<span class="muted small">
+						<span class="text-sm text-muted">
 							· <code>{{ l.id }}</code> ·
+							{{ $t(`rules.${l.ruleset}.name`) }}
+							·
 							{{
 								$t("home.playerCount", { count: l.players, max: l.maxPlayers })
 							}}
@@ -90,13 +99,13 @@
 							{{ $t("common.columns", l.columns) }}
 						</span>
 					</div>
-					<div class="mine-actions">
+					<div class="flex items-center gap-2">
 						<span v-if="l.myTurn" class="badge badge-green">{{
 							$t("home.yourTurn")
 						}}</span>
-						<span v-if="l.role === 'spectator'" class="badge badge-muted"
-							>👁 {{ $t("home.spectator") }}</span
-						>
+						<span v-if="l.role === 'spectator'" class="badge badge-muted">
+							👁 {{ $t("home.spectator") }}
+						</span>
 						<span class="badge badge-muted">{{ $t(`phase.${l.phase}`) }}</span>
 						<NuxtLink
 							:to="localePath({ name: 'lobby-id', params: { id: l.id } })"
@@ -112,78 +121,3 @@
 		</section>
 	</div>
 </template>
-
-<style scoped>
-	.notice {
-		background: rgba(251, 191, 36, 0.1);
-		border: 1px solid rgba(251, 191, 36, 0.35);
-		color: var(--gold);
-		border-radius: var(--radius);
-		padding: 0.7rem 1rem;
-		margin: 0 0 1.25rem;
-	}
-	.hero {
-		margin-bottom: 1.5rem;
-	}
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-		gap: 1.25rem;
-		align-items: stretch;
-	}
-	.action {
-		color: var(--text);
-		transition:
-			border-color 0.15s,
-			transform 0.15s;
-	}
-	.action:hover {
-		border-color: var(--accent);
-		transform: translateY(-2px);
-	}
-	.action p {
-		margin: 0;
-	}
-	.action-icon {
-		display: grid;
-		place-items: center;
-		width: 42px;
-		height: 42px;
-		border-radius: 10px;
-		background: rgba(74, 222, 128, 0.12);
-		color: var(--accent);
-		font-size: 1.4rem;
-		font-weight: 800;
-		margin-bottom: 0.75rem;
-	}
-	.card-head {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-	}
-	.mine {
-		margin-top: 1.25rem;
-	}
-	.mine ul {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.mine li {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-		flex-wrap: wrap;
-		padding: 0.75rem 0;
-		border-bottom: 1px solid var(--border);
-	}
-	.mine li:last-child {
-		border-bottom: none;
-	}
-	.mine-actions {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
-</style>

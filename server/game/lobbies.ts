@@ -1,17 +1,18 @@
 import { randomInt } from "node:crypto";
 import type { Namespace, Socket } from "socket.io";
 import {
-	CATEGORIES,
 	type Category,
 	DICE_COUNT,
-	isCombo,
 	isSheetComplete,
+	isUpper,
 	MAX_COLUMNS,
 	MAX_PLAYERS,
 	MAX_ROLLS,
 	MIN_PLAYERS,
+	RULESET_IDS,
+	type RulesetId,
+	rulesetOf,
 	type ScoreColumn,
-	scoreFor,
 	sheetTotal,
 } from "#shared/game";
 import type {
@@ -44,13 +45,11 @@ interface LobbyPlayer {
 
 interface Game {
 	order: string[];
-	/** Name snapshot, so results still show players who left. */
 	names: Record<string, string>;
 	turn: number;
 	rollCount: number;
 	dice: DieState[];
 	scores: Record<string, ScoreColumn[]>;
-	/** Epoch ms until which the current roll animation is still playing. */
 	rollingUntil: number;
 	lastAction: LastAction | null;
 }
@@ -60,22 +59,19 @@ interface Lobby {
 	name: string;
 	passwordHash: string;
 	hostId: string;
+	ruleset: RulesetId;
 	columns: number;
 	maxPlayers: number;
 	phase: LobbyPhase;
-	/** Seated players (at most maxPlayers). */
 	players: LobbyPlayer[];
-	/** Watchers; they take free seats whenever no game is running. */
 	spectators: LobbyPlayer[];
 	game: Game | null;
 	winners: string[];
-	/** Rotates the starting player between rounds. */
 	rounds: number;
 	createdAt: number;
 	updatedAt: number;
 }
 
-/** Errors carry a code (+ params) that the client translates. */
 class GameError extends Error {
 	constructor(
 		public code: string,
@@ -87,12 +83,10 @@ class GameError extends Error {
 
 const LOBBY_TTL = 7 * 24 * 3600 * 1000;
 const RECENT_FINISHED = 6 * 3600 * 1000;
-/** A running game is cancelled once every player has been offline this long. */
 const ABANDON_AFTER = 5 * 60 * 1000;
 const ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 const lobbies = new Map<string, Lobby>();
-/** lobbyId -> userId -> sockets currently viewing that lobby */
 const presence = new Map<string, Map<string, Set<string>>>();
 const persistTimers = new Map<string, NodeJS.Timeout>();
 const abandonTimers = new Map<string, NodeJS.Timeout>();
@@ -114,6 +108,7 @@ function ensureLoaded() {
 		for (const { data: lobby, updatedAt } of await loadLobbyRecords<Lobby>()) {
 			if (Date.now() - updatedAt.getTime() < LOBBY_TTL) {
 				lobby.spectators ??= [];
+				lobby.ruleset ??= "poker";
 				if (lobby.game)
 					lobby.game.names ??= Object.fromEntries(
 						lobby.players.map((p) => [p.id, p.name]),
@@ -164,12 +159,13 @@ function publicState(lobby: Lobby): LobbyState {
 		id: p.id,
 		name: p.name,
 		connected: isOnline(lobby.id, p.id),
-		total: sheetTotal(g?.scores[p.id]),
+		total: sheetTotal(rulesetOf(lobby.ruleset), g?.scores[p.id]),
 	});
 	return {
 		id: lobby.id,
 		name: lobby.name,
 		hostId: lobby.hostId,
+		ruleset: lobby.ruleset,
 		columns: lobby.columns,
 		maxPlayers: lobby.maxPlayers,
 		phase: lobby.phase,
@@ -198,7 +194,6 @@ function notify(lobby: Lobby, notice: Omit<LobbyNotice, "lobbyId">) {
 	ns?.to(room(lobby.id)).emit("lobby:notice", { lobbyId: lobby.id, ...notice });
 }
 
-/** Tells every member's other pages (e.g. the "back to game" bar) that their lobby list changed. */
 function membersChanged(lobby: Lobby) {
 	for (const m of members(lobby))
 		ns?.to(userRoom(m.id)).emit("lobbies:changed");
@@ -222,7 +217,6 @@ function newLobbyId() {
 	}
 }
 
-/** Outside a running game, free seats go to spectators in join order. */
 function fillSeats(lobby: Lobby) {
 	if (lobby.phase === "playing") return;
 	while (lobby.players.length < lobby.maxPlayers && lobby.spectators.length) {
@@ -231,8 +225,6 @@ function fillSeats(lobby: Lobby) {
 	if (!isPlayer(lobby, lobby.hostId) && lobby.players[0])
 		lobby.hostId = lobby.players[0].id;
 }
-
-// --- game flow ---
 
 function startGame(lobby: Lobby) {
 	const ids = lobby.players.map((p) => p.id);
@@ -278,7 +270,6 @@ function stopAbandonTimer(lobby: Lobby) {
 	abandonTimers.delete(lobby.id);
 }
 
-/** Cancels the running game without recording stats; the lobby returns to the waiting room. */
 function abortGame(lobby: Lobby, reason: LobbyNotice["code"]) {
 	lobby.game = null;
 	lobby.phase = "waiting";
@@ -291,7 +282,11 @@ function abortGame(lobby: Lobby, reason: LobbyNotice["code"]) {
 
 async function finishGame(lobby: Lobby) {
 	const g = lobby.game!;
-	const totals = g.order.map((id) => ({ id, score: sheetTotal(g.scores[id]) }));
+	const rules = rulesetOf(lobby.ruleset);
+	const totals = g.order.map((id) => ({
+		id,
+		score: sheetTotal(rules, g.scores[id]),
+	}));
 	const best = Math.max(...totals.map((t) => t.score));
 	lobby.phase = "finished";
 	lobby.winners = totals.filter((t) => t.score === best).map((t) => t.id);
@@ -310,7 +305,6 @@ async function finishGame(lobby: Lobby) {
 	).catch((err) => console.error("[stats] failed to record game", err));
 }
 
-/** Takes a player out of the running game; stops it if too few players remain. */
 async function removeFromGame(lobby: Lobby, playerId: string) {
 	const g = lobby.game;
 	const index = g?.order.indexOf(playerId) ?? -1;
@@ -327,13 +321,14 @@ async function removeFromGame(lobby: Lobby, playerId: string) {
 	}
 	g.turn %= g.order.length;
 	if (wasCurrent) resetTurn(g);
-	if (g.order.every((id) => isSheetComplete(g.scores[id]!)))
+	const rules = rulesetOf(lobby.ruleset);
+	if (g.order.every((id) => isSheetComplete(rules, g.scores[id]!)))
 		await finishGame(lobby);
 }
 
 async function removeMember(lobby: Lobby, userId: string) {
 	const name = nameOf(lobby, userId);
-	membersChanged(lobby); // includes the one leaving
+	membersChanged(lobby);
 	await removeFromGame(lobby, userId);
 	lobby.players = lobby.players.filter((p) => p.id !== userId);
 	lobby.spectators = lobby.spectators.filter((p) => p.id !== userId);
@@ -342,7 +337,6 @@ async function removeMember(lobby: Lobby, userId: string) {
 		removeLobby(lobby);
 		return;
 	}
-	// The host role passes on; the game itself keeps running for everyone else.
 	if (lobby.hostId === userId) lobby.hostId = lobby.players[0]?.id ?? "";
 	fillSeats(lobby);
 	notify(lobby, { code: "playerLeft", params: { name } });
@@ -390,7 +384,6 @@ function setPresence(
 	checkAbandoned(lobby);
 }
 
-/** Propagates a display-name change into every lobby the user is in. */
 export function renamePlayer(userId: string, name: string) {
 	for (const lobby of lobbies.values()) {
 		const member = members(lobby).find((m) => m.id === userId);
@@ -401,8 +394,6 @@ export function renamePlayer(userId: string, name: string) {
 		broadcast(lobby);
 	}
 }
-
-// --- validation helpers ---
 
 function cleanText(value: unknown, field: string, max: number): string {
 	const text = typeof value === "string" ? value.trim() : "";
@@ -455,13 +446,10 @@ function playingLobby(
 function activeTurn(lobbyId: unknown, userId: string) {
 	const { lobby, game } = playingLobby(lobbyId, userId);
 	if (game.order[game.turn] !== userId) throw new GameError("NOT_YOUR_TURN");
-	// Small tolerance so clicks right at the end of the animation are accepted.
 	if (Date.now() < game.rollingUntil - 200)
 		throw new GameError("STILL_ROLLING");
 	return { lobby, game };
 }
-
-// --- socket handlers ---
 
 type Handler = (
 	payload: Record<string, unknown>,
@@ -499,36 +487,40 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 
 	const myName = async () => (await getUser(me))?.name ?? "?";
 
-	on("lobby:create", async ({ name, password, columns, maxPlayers }) => {
-		const id = newLobbyId();
-		const lobby: Lobby = {
-			id,
-			name: cleanText(name, "lobbyName", 30),
-			passwordHash: hashPassword(cleanText(password, "password", 64)),
-			hostId: me,
-			columns: intInRange(columns, 1, MAX_COLUMNS, "columns"),
-			maxPlayers: intInRange(
-				maxPlayers,
-				MIN_PLAYERS,
-				MAX_PLAYERS,
-				"maxPlayers",
-			),
-			phase: "waiting",
-			players: [{ id: me, name: await myName() }],
-			spectators: [],
-			game: null,
-			winners: [],
-			rounds: 0,
-			createdAt: Date.now(),
-			updatedAt: Date.now(),
-		};
-		lobbies.set(id, lobby);
-		touch(lobby);
-		return { lobbyId: id };
-	});
+	on(
+		"lobby:create",
+		async ({ name, password, ruleset, columns, maxPlayers }) => {
+			if (!RULESET_IDS.includes(ruleset as RulesetId))
+				throw new GameError("UNKNOWN_RULESET");
+			const id = newLobbyId();
+			const lobby: Lobby = {
+				id,
+				name: cleanText(name, "lobbyName", 30),
+				passwordHash: hashPassword(cleanText(password, "password", 64)),
+				hostId: me,
+				ruleset: ruleset as RulesetId,
+				columns: intInRange(columns, 1, MAX_COLUMNS, "columns"),
+				maxPlayers: intInRange(
+					maxPlayers,
+					MIN_PLAYERS,
+					MAX_PLAYERS,
+					"maxPlayers",
+				),
+				phase: "waiting",
+				players: [{ id: me, name: await myName() }],
+				spectators: [],
+				game: null,
+				winners: [],
+				rounds: 0,
+				createdAt: Date.now(),
+				updatedAt: Date.now(),
+			};
+			lobbies.set(id, lobby);
+			touch(lobby);
+			return { lobbyId: id };
+		},
+	);
 
-	// Joining always works with the right password: a seat if one is free and no game
-	// is running, otherwise as spectator.
 	on("lobby:join", async ({ lobbyId, password }) => {
 		const lobby = findLobby(lobbyId);
 		if (isMember(lobby, me)) return { lobbyId: lobby.id };
@@ -625,7 +617,6 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 			frames: roll.frames,
 			fps: roll.fps,
 		};
-		// Animation first, so clients do not snap dice to their final pose before it plays.
 		ns!.to(room(lobby.id)).emit("game:roll", animation);
 		touch(lobby);
 		broadcast(lobby);
@@ -645,14 +636,15 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 		const { lobby, game } = activeTurn(lobbyId, me);
 		if (game.rollCount === 0) throw new GameError("MUST_ROLL_FIRST");
 		const col = intInRange(column, 0, lobby.columns - 1, "column");
-		if (!CATEGORIES.includes(category as Category))
+		const rules = rulesetOf(lobby.ruleset);
+		if (!rules.categories.includes(category as Category))
 			throw new GameError("UNKNOWN_FIELD");
 		const cat = category as Category;
 		const sheetColumn = game.scores[me]![col]!;
 		if (sheetColumn[cat] !== undefined) throw new GameError("FIELD_TAKEN");
 
-		const served = game.rollCount === 1;
-		const points = scoreFor(
+		const served = rules.hasServed && game.rollCount === 1;
+		const points = rules.score(
 			cat,
 			game.dice.map((d) => d.value),
 			served,
@@ -664,10 +656,10 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 			column: col,
 			category: cat,
 			points,
-			served: served && isCombo(cat) && points > 0,
+			served: served && points > 0 && !isUpper(cat),
 		};
 
-		if (game.order.every((id) => isSheetComplete(game.scores[id]!)))
+		if (game.order.every((id) => isSheetComplete(rules, game.scores[id]!)))
 			await finishGame(lobby);
 		else nextTurn(lobby);
 		touch(lobby);
@@ -696,6 +688,7 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 				id: l.id,
 				name: l.name,
 				phase: l.phase,
+				ruleset: l.ruleset,
 				role: isPlayer(l, me) ? "player" : "spectator",
 				inGame: l.phase === "playing" && !!l.game?.order.includes(me),
 				players: l.players.length,

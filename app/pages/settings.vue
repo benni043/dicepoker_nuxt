@@ -30,13 +30,13 @@
 </script>
 
 <template>
-	<div class="settings">
+	<div class="mx-auto flex max-w-160 flex-col gap-5">
 		<h1>{{ $t("settings.title") }}</h1>
 
 		<section class="card">
 			<h2>{{ $t("settings.profile") }}</h2>
-			<form class="row" @submit.prevent="saveName">
-				<label class="field grow">
+			<form class="flex items-end gap-3" @submit.prevent="saveName">
+				<label class="field mb-0 flex-1">
 					<span>{{ $t("settings.displayName") }}</span>
 					<input v-model="name" class="input" maxlength="20" required>
 				</label>
@@ -48,17 +48,17 @@
 					{{ $t("settings.save") }}
 				</button>
 			</form>
-			<p v-if="message" class="ok small">{{ message }}</p>
-			<p v-if="error" class="error small">{{ error }}</p>
+			<p v-if="message" class="mt-2 text-sm text-accent">{{ message }}</p>
+			<p v-if="error" class="mt-2 text-sm text-danger">{{ error }}</p>
 		</section>
 
 		<section class="card">
 			<h2>{{ $t("settings.language") }}</h2>
-			<div class="langs">
+			<div class="flex gap-2">
 				<button
-					type="button"
 					v-for="l in locales"
 					:key="l.code"
+					type="button"
 					class="btn"
 					:class="{ 'btn-primary': l.code === locale }"
 					@click="setLocale(l.code)"
@@ -70,15 +70,15 @@
 
 		<section class="card">
 			<h2>{{ $t("settings.account") }}</h2>
-			<div class="account">
+			<div class="flex items-center gap-3">
 				<img
 					v-if="user?.avatarUrl"
 					:src="user.avatarUrl"
 					alt=""
-					class="avatar"
+					class="size-10 rounded-full"
 					referrerpolicy="no-referrer"
 				>
-				<p class="muted">
+				<p class="flex-1 text-muted">
 					{{ $t("settings.loggedInAs", { name: user?.name }) }}
 				</p>
 				<button type="button" class="btn btn-ghost" @click="logout">
@@ -88,45 +88,3 @@
 		</section>
 	</div>
 </template>
-
-<style scoped>
-	.settings {
-		max-width: 640px;
-		margin: 0 auto;
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-	}
-	.row {
-		display: flex;
-		gap: 0.75rem;
-		align-items: flex-end;
-	}
-	.row .field {
-		margin-bottom: 0;
-	}
-	.grow {
-		flex: 1;
-	}
-	.ok {
-		color: var(--accent);
-	}
-	.langs {
-		display: flex;
-		gap: 0.5rem;
-	}
-	.account {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-	.account p {
-		margin: 0;
-		flex: 1;
-	}
-	.avatar {
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-	}
-</style>

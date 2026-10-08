@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { useRuntimeConfig } from "nitropack/runtime";
 
-// Short-lived token proving a socket connection belongs to a logged-in user.
 const TTL_MS = 60_000;
 
 function secret(): string {

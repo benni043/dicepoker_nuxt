@@ -56,7 +56,8 @@
 		"lobbyId": "Lobby-ID",
 		"die": "Würfel",
 		"column": "Spalte",
-		"name": "Name"
+		"name": "Name",
+		"ruleset": "Spielregeln"
 	},
 	"lobby": {
 		"connecting": "Verbinde mit Lobby {id}…",
@@ -117,7 +118,9 @@
 	},
 	"sheet": {
 		"total": "Gesamt",
-		"cellTitle": "{field} in Spalte {column}"
+		"cellTitle": "{field} in Spalte {column}",
+		"bonus": "Bonus",
+		"bonusTitle": "+{points} Punkte, wenn 1–6 zusammen mindestens {threshold} ergeben"
 	},
 	"categories": {
 		"ones": "Einser",
@@ -130,7 +133,12 @@
 		"street": "Straße",
 		"poker": "Poker",
 		"grande": "Grande",
-		"doubleGrande": "Doppel-Grande"
+		"doubleGrande": "Doppel-Grande",
+		"threeOfKind": "Dreierpasch",
+		"fourOfKind": "Viererpasch",
+		"smallStraight": "Kleine Straße",
+		"largeStraight": "Große Straße",
+		"chance": "Chance"
 	},
 	"stats": {
 		"title": "Statistik",
@@ -188,7 +196,8 @@
 		"UNKNOWN_FIELD": "Unbekanntes Feld.",
 		"FIELD_TAKEN": "Dieses Feld ist schon belegt.",
 		"ONLY_OFFLINE_SKIP": "Nur Spieler, die offline sind, können übersprungen werden.",
-		"ONLY_IN_WAITING_ROOM": "Das geht nur im Warteraum."
+		"ONLY_IN_WAITING_ROOM": "Das geht nur im Warteraum.",
+		"UNKNOWN_RULESET": "Unbekannte Spielregeln."
 	},
 	"notFound": {
 		"title": "Seite nicht gefunden",
@@ -198,5 +207,33 @@
 		"playing": "Laufendes Spiel: {name}",
 		"watching": "Du schaust zu: {name}",
 		"back": "Zurück zum Spiel"
+	},
+	"categoryShort": {
+		"ones": "1",
+		"twos": "2",
+		"threes": "3",
+		"fours": "4",
+		"fives": "5",
+		"sixes": "6",
+		"fullHouse": "F",
+		"street": "St",
+		"poker": "P",
+		"grande": "G",
+		"doubleGrande": "DG",
+		"threeOfKind": "3P",
+		"fourOfKind": "4P",
+		"smallStraight": "kS",
+		"largeStraight": "gS",
+		"chance": "Ch"
+	},
+	"rules": {
+		"poker": {
+			"name": "Würfelpoker",
+			"description": "Full House, Straße, Poker, Grande – serviert gibt's mehr Punkte."
+		},
+		"kniffel": {
+			"name": "Kniffel",
+			"description": "Bonus ab 60 oben, Pasch, Straßen, Grande und Chance."
+		}
 	}
 }

@@ -1,4 +1,4 @@
-import type { Category, ScoreColumn } from "./game";
+import type { Category, RulesetId, ScoreColumn } from "./game";
 
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number];
@@ -11,7 +11,6 @@ export interface Pose {
 export interface DieState {
 	value: number;
 	held: boolean;
-	/** Resting pose inside the arena after the last roll; null = idle row. */
 	pose: Pose | null;
 }
 
@@ -34,7 +33,6 @@ export interface LastAction {
 
 export interface GameState {
 	order: string[];
-	/** Name snapshot of everyone who started the round (incl. players who left). */
 	names: Record<string, string>;
 	currentPlayerId: string;
 	rollCount: number;
@@ -47,6 +45,7 @@ export interface LobbyState {
 	id: string;
 	name: string;
 	hostId: string;
+	ruleset: RulesetId;
 	columns: number;
 	maxPlayers: number;
 	phase: LobbyPhase;
@@ -60,8 +59,8 @@ export interface LobbySummary {
 	id: string;
 	name: string;
 	phase: LobbyPhase;
+	ruleset: RulesetId;
 	role: "player" | "spectator";
-	/** I am a player in the currently running game. */
 	inGame: boolean;
 	players: number;
 	maxPlayers: number;
@@ -70,7 +69,6 @@ export interface LobbySummary {
 	updatedAt: number;
 }
 
-/** Pre-simulated roll: frames hold [x,y,z,qx,qy,qz,qw] for each die in `indices`. */
 export interface RollAnimation {
 	lobbyId: string;
 	indices: number[];

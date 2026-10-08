@@ -20,8 +20,6 @@ export function verifyPassword(password: string, stored: string): boolean {
 	return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-// --- users ---
-
 export async function upsertGoogleUser(profile: {
 	sub: string;
 	email?: string;
@@ -37,7 +35,6 @@ export async function upsertGoogleUser(profile: {
 			name: profile.name.slice(0, 20),
 			avatarUrl: profile.avatarUrl,
 		})
-		// Keep the display name the user picked; refresh everything else.
 		.onConflictDoUpdate({
 			target: users.googleSub,
 			set: {
@@ -66,10 +63,8 @@ export async function updateUserName(id: string, name: string) {
 	return user ?? null;
 }
 
-// --- stats ---
-
 export async function recordGame(
-	lobby: { id: string; name: string; columns: number },
+	lobby: { id: string; name: string; ruleset: string; columns: number },
 	results: { userId: string; score: number; rank: number; won: boolean }[],
 ) {
 	await dbReady();
@@ -79,6 +74,7 @@ export async function recordGame(
 			.values({
 				lobbyId: lobby.id,
 				lobbyName: lobby.name,
+				ruleset: lobby.ruleset,
 				columns: lobby.columns,
 			})
 			.returning({ id: games.id });
@@ -163,8 +159,6 @@ export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
 		)
 		.limit(limit);
 }
-
-// --- lobby snapshots ---
 
 export async function loadLobbyRecords<T>(): Promise<
 	{ data: T; updatedAt: Date }[]

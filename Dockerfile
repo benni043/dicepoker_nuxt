@@ -1,6 +1,3 @@
-# syntax=docker/dockerfile:1
-
-# ---- build ----
 FROM node:22-alpine AS build
 WORKDIR /app
 RUN corepack enable
@@ -11,7 +8,6 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 
-# ---- runtime ----
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
@@ -19,7 +15,6 @@ ENV NODE_ENV=production \
     PORT=3000 \
     NUXT_MIGRATIONS_DIR=/app/migrations
 
-# The Nitro output is self-contained (it bundles its own node_modules).
 COPY --from=build --chown=node:node /app/.output ./.output
 COPY --from=build --chown=node:node /app/server/db/migrations ./migrations
 

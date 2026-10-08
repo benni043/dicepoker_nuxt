@@ -14,7 +14,6 @@ export default defineNuxtRouteMiddleware((to) => {
 		return;
 	}
 	if (!loggedIn.value) {
-		// The target URL's language, which may differ from the current one while switching.
 		const prefix = to.path.split("/")[1] ?? "";
 		const locale =
 			$i18n.localeCodes.value.find((code) => code === prefix) ??

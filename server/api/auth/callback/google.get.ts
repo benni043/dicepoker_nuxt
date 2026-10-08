@@ -1,9 +1,6 @@
 import { localizedQuery } from "#shared/query";
 import { upsertGoogleUser } from "../../../game/store";
 
-// Both legs of the OAuth flow run here: without `code` it redirects to Google,
-// with `code` (Google's callback) it signs the user in.
-// Register this URL as redirect URI in the Google console: <origin>/api/auth/callback/google
 const handler = defineOAuthGoogleEventHandler({
 	config: { scope: ["openid", "email", "profile"] },
 	async onSuccess(event, { user: profile }) {

@@ -1,22 +1,23 @@
 <script setup lang="ts">
 	import {
-		CATEGORIES,
-		CATEGORY_SHORT,
 		type Category,
+		columnBonus,
 		columnTotal,
+		type RulesetId,
+		rulesetOf,
 		type ScoreColumn,
-		scoreFor,
 		sheetTotal,
+		upperSum,
 	} from "#shared/game";
 	import type { LastAction } from "#shared/types";
 
 	const props = defineProps<{
 		players: { id: string; name: string }[];
+		ruleset: RulesetId;
 		columns: number;
 		scores: Record<string, ScoreColumn[]>;
 		currentPlayerId: string | null;
 		meId: string;
-		/** The local player may enter a score now. */
 		pickable: boolean;
 		dice: number[];
 		served: boolean;
@@ -29,11 +30,18 @@
 
 	const ROMAN = ["I", "II", "III", "IV", "V", "VI"];
 
+	const rules = computed(() => rulesetOf(props.ruleset));
+
 	const sheet = (playerId: string) => props.scores[playerId] ?? [];
 	const cell = (playerId: string, column: number, category: Category) =>
 		sheet(playerId)[column]?.[category];
 	const preview = (playerId: string, column: number, category: Category) =>
-		scoreFor(category, props.dice, props.served, sheet(playerId)[column] ?? {});
+		rules.value.score(
+			category,
+			props.dice,
+			props.served,
+			sheet(playerId)[column] ?? {},
+		);
 
 	function isLast(playerId: string, column: number, category: Category) {
 		const a = props.lastAction;
@@ -44,20 +52,35 @@
 			a.category === category
 		);
 	}
+
+	const cellBase = "h-[34px] min-w-[42px] border-b border-line p-0 text-center";
+	const categoryCell =
+		"sticky left-0 z-1 min-w-14 border-b border-line bg-surface px-2.5 text-left font-bold text-muted";
+
+	function columnClass(playerId: string, column: number) {
+		return [
+			cellBase,
+			column === 1 ? "border-l" : "",
+			playerId === props.currentPlayerId ? "bg-accent/6" : "",
+		];
+	}
 </script>
 
 <template>
-	<div class="sheet-scroll">
-		<table class="score-table">
+	<div class="overflow-x-auto">
+		<table class="w-full border-separate border-spacing-0 text-sm tabular-nums">
 			<thead>
 				<tr>
-					<th class="cat" rowspan="2" />
+					<th :class="categoryCell" rowspan="2" />
 					<th
 						v-for="p in players"
 						:key="p.id"
 						:colspan="columns"
-						class="player-head"
-						:class="{ current: p.id === currentPlayerId, me: p.id === meId }"
+						class="max-w-40 truncate border-b border-l border-line px-2 py-1.5 font-bold whitespace-nowrap"
+						:class="[
+							p.id === currentPlayerId ? 'bg-accent/14' : '',
+							p.id === meId ? 'text-accent' : '',
+						]"
 					>
 						{{ p.name }}
 					</th>
@@ -67,8 +90,8 @@
 						<th
 							v-for="c in columns"
 							:key="c"
-							class="col-head"
-							:class="{ current: p.id === currentPlayerId, start: c === 1 }"
+							:class="columnClass(p.id, c)"
+							class="text-xs font-semibold text-muted"
 						>
 							{{ ROMAN[c - 1] }}
 						</th>
@@ -76,171 +99,99 @@
 				</tr>
 			</thead>
 			<tbody>
-				<tr
-					v-for="cat in CATEGORIES"
-					:key="cat"
-					:class="{ divider: cat === 'fullHouse' }"
-				>
-					<th class="cat" :title="$t(`categories.${cat}`)">
-						{{ CATEGORY_SHORT[cat] }}
+				<template v-for="cat in rules.categories" :key="cat">
+					<tr
+						:class="cat === rules.firstSpecial ? '*:border-t-2 *:border-t-surface-3' : ''"
+					>
+						<th :class="categoryCell" :title="$t(`categories.${cat}`)">
+							{{ $t(`categoryShort.${cat}`) }}
+						</th>
+						<template v-for="p in players" :key="p.id">
+							<td
+								v-for="c in columns"
+								:key="c"
+								:class="[columnClass(p.id, c), isLast(p.id, c - 1, cat) ? 'animate-flash' : '']"
+							>
+								<span
+									v-if="cell(p.id, c - 1, cat) !== undefined"
+									:class="cell(p.id, c - 1, cat) === 0 ? 'text-muted' : ''"
+								>
+									{{
+										cell(p.id, c - 1, cat) === 0 ? "–" : cell(p.id, c - 1, cat)
+									}}
+								</span>
+								<button
+									v-else-if="pickable && p.id === meId"
+									type="button"
+									class="size-full cursor-pointer transition-colors"
+									:class="
+									preview(p.id, c - 1, cat) === 0
+										? 'text-muted/50 hover:bg-danger/15 hover:text-danger'
+										: 'bg-accent/12 font-bold text-accent hover:bg-accent/30'
+								"
+									:title="$t('sheet.cellTitle', { field: $t(`categories.${cat}`), column: ROMAN[c - 1] })"
+									@click="emit('pick', c - 1, cat, preview(p.id, c - 1, cat))"
+								>
+									{{ preview(p.id, c - 1, cat) }}
+								</button>
+							</td>
+						</template>
+					</tr>
+					<tr v-if="cat === 'sixes' && rules.bonus">
+						<th
+							:class="categoryCell"
+							:title="$t('sheet.bonusTitle', { threshold: rules.bonus.threshold, points: rules.bonus.points })"
+						>
+							{{ $t("sheet.bonus") }}
+						</th>
+						<template v-for="p in players" :key="p.id">
+							<td
+								v-for="c in columns"
+								:key="c"
+								:class="columnClass(p.id, c)"
+								class="text-xs"
+							>
+								<span
+									v-if="columnBonus(rules, sheet(p.id)[c - 1])"
+									class="font-bold text-gold"
+								>
+									+{{ columnBonus(rules, sheet(p.id)[c - 1]) }}
+								</span>
+								<span v-else class="text-muted">
+									{{ upperSum(sheet(p.id)[c - 1]) }}/{{ rules.bonus.threshold }}
+								</span>
+							</td>
+						</template>
+					</tr>
+				</template>
+				<tr>
+					<th :class="categoryCell">Σ</th>
+					<template v-for="p in players" :key="p.id">
+						<td
+							v-for="c in columns"
+							:key="c"
+							:class="columnClass(p.id, c)"
+							class="font-semibold text-muted"
+						>
+							{{ columnTotal(rules, sheet(p.id)[c - 1]) }}
+						</td>
+					</template>
+				</tr>
+				<tr>
+					<th :class="categoryCell" class="border-b-0">
+						{{ $t("sheet.total") }}
 					</th>
-					<template v-for="p in players" :key="p.id">
-						<td
-							v-for="c in columns"
-							:key="c"
-							:class="{ current: p.id === currentPlayerId, start: c === 1, last: isLast(p.id, c - 1, cat) }"
-						>
-							<span
-								v-if="cell(p.id, c - 1, cat) !== undefined"
-								:class="{ struck: cell(p.id, c - 1, cat) === 0 }"
-							>
-								{{
-									cell(p.id, c - 1, cat) === 0 ? "–" : cell(p.id, c - 1, cat)
-								}}
-							</span>
-							<button
-								type="button"
-								v-else-if="pickable && p.id === meId"
-								class="pick"
-								:class="{ zero: preview(p.id, c - 1, cat) === 0 }"
-								:title="$t('sheet.cellTitle', { field: $t(`categories.${cat}`), column: ROMAN[c - 1] })"
-								@click="emit('pick', c - 1, cat, preview(p.id, c - 1, cat))"
-							>
-								{{ preview(p.id, c - 1, cat) }}
-							</button>
-						</td>
-					</template>
-				</tr>
-				<tr class="sum-row">
-					<th class="cat">Σ</th>
-					<template v-for="p in players" :key="p.id">
-						<td
-							v-for="c in columns"
-							:key="c"
-							:class="{ current: p.id === currentPlayerId, start: c === 1 }"
-						>
-							{{ columnTotal(sheet(p.id)[c - 1]) }}
-						</td>
-					</template>
-				</tr>
-				<tr class="total-row">
-					<th class="cat">{{ $t("sheet.total") }}</th>
 					<td
 						v-for="p in players"
 						:key="p.id"
 						:colspan="columns"
-						class="start"
-						:class="{ current: p.id === currentPlayerId }"
+						:class="columnClass(p.id, 1)"
+						class="border-b-0 text-[1.05rem] font-extrabold"
 					>
-						{{ sheetTotal(sheet(p.id)) }}
+						{{ sheetTotal(rules, sheet(p.id)) }}
 					</td>
 				</tr>
 			</tbody>
 		</table>
 	</div>
 </template>
-
-<style scoped>
-	.sheet-scroll {
-		overflow-x: auto;
-	}
-	.score-table {
-		border-collapse: separate;
-		border-spacing: 0;
-		width: 100%;
-		font-variant-numeric: tabular-nums;
-		font-size: 0.9rem;
-	}
-	th,
-	td {
-		text-align: center;
-		padding: 0;
-		height: 34px;
-		min-width: 42px;
-		border-bottom: 1px solid var(--border);
-	}
-	td.start,
-	th.start {
-		border-left: 1px solid var(--border);
-	}
-	.player-head {
-		padding: 0.4rem 0.5rem;
-		border-left: 1px solid var(--border);
-		font-weight: 700;
-		white-space: nowrap;
-		max-width: 160px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.player-head.me {
-		color: var(--accent);
-	}
-	.col-head {
-		color: var(--muted);
-		font-size: 0.75rem;
-		font-weight: 600;
-	}
-	.current {
-		background: rgba(74, 222, 128, 0.06);
-	}
-	.player-head.current {
-		background: rgba(74, 222, 128, 0.14);
-	}
-	.cat {
-		text-align: left;
-		padding: 0 0.6rem;
-		color: var(--muted);
-		font-weight: 700;
-		position: sticky;
-		left: 0;
-		background: var(--surface);
-		z-index: 1;
-		min-width: 56px;
-	}
-	tr.divider > * {
-		border-top: 2px solid var(--surface-3);
-	}
-	.struck {
-		color: var(--muted);
-	}
-	.last {
-		animation: flash 1.6s ease-out;
-	}
-	@keyframes flash {
-		from {
-			background: rgba(251, 191, 36, 0.45);
-		}
-	}
-	.pick {
-		width: 100%;
-		height: 100%;
-		border: none;
-		background: rgba(74, 222, 128, 0.12);
-		color: var(--accent);
-		font: inherit;
-		font-weight: 700;
-		cursor: pointer;
-		transition: background 0.12s;
-	}
-	.pick:hover {
-		background: rgba(74, 222, 128, 0.3);
-	}
-	.pick.zero {
-		background: transparent;
-		color: rgba(139, 147, 167, 0.5);
-		font-weight: 400;
-	}
-	.pick.zero:hover {
-		background: rgba(248, 113, 113, 0.15);
-		color: var(--danger);
-	}
-	.sum-row td {
-		color: var(--muted);
-		font-weight: 600;
-	}
-	.total-row td {
-		font-weight: 800;
-		font-size: 1.05rem;
-		border-bottom: none;
-	}
-</style>

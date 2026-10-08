@@ -13,9 +13,7 @@
 
 	const props = defineProps<{
 		dice: DieState[];
-		/** Dice can be clicked to toggle hold. */
 		interactive: boolean;
-		/** Fill the parent's height instead of keeping a 4:3 box. */
 		fill?: boolean;
 	}>();
 
@@ -24,7 +22,6 @@
 		settled: [];
 	}>();
 
-	// BoxGeometry material groups are ordered +X, -X, +Y, -Y, +Z, -Z (see FACE_NORMALS).
 	const FACE_ORDER = [3, 4, 1, 6, 2, 5];
 	const PIPS: Record<number, [number, number][]> = {
 		1: [[0.5, 0.5]],
@@ -71,7 +68,6 @@
 	let resizeObserver: ResizeObserver | null = null;
 	let anim: (RollAnimation & { start: number }) | null = null;
 	const meshes: THREE.Mesh[] = [];
-	/** Eased die positions; the rendered position adds a lift so dice hop over walls. */
 	const basePositions: THREE.Vector3[] = [];
 	const dieMaterials: THREE.MeshStandardMaterial[][] = [];
 	const disposables: { dispose(): void }[] = [];
@@ -135,6 +131,7 @@
 		renderer.shadowMap.enabled = true;
 		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 		renderer.toneMapping = THREE.ACESFilmicToneMapping;
+		renderer.domElement.className = "block size-full";
 		host.value!.appendChild(renderer.domElement);
 
 		scene = new THREE.Scene();
@@ -233,10 +230,8 @@
 		if (!renderer || !host.value) return;
 		const { clientWidth: w, clientHeight: h } = host.value;
 		if (!w || !h) return;
-		// Keep CSS size at 100% so the canvas never forces its container wider.
 		renderer.setSize(w, h, false);
 		camera.aspect = w / h;
-		// Pull the camera back on narrow screens so the whole arena stays visible.
 		const fit = Math.max(1, 1.2 / camera.aspect);
 		camera.position.set(0, 8.4 * fit, 5.4 * fit);
 		camera.lookAt(0, 0, 0.45);
@@ -281,7 +276,6 @@
 				sampleAnimation(anim, k, now, mesh);
 				base.copy(mesh.position);
 			} else {
-				// Ease towards the target, which animates holds, releases and turn resets.
 				const pose = targetPose(i);
 				tmpPos.set(...pose.p);
 				base.lerp(tmpPos, follow);
@@ -358,33 +352,10 @@
 	<!-- biome-ignore lint/a11y/noStaticElementInteractions lint/a11y/useKeyWithClickEvents: clicking dice in 3D is a shortcut; DiceTray offers the same toggles as keyboard-accessible buttons -->
 	<div
 		ref="host"
-		class="dice-scene"
-		:class="{ pointer: interactive && hovered >= 0, fill }"
+		class="w-full overflow-hidden rounded-xl border border-line bg-bg"
+		:class="[fill ? 'h-full' : 'aspect-4/3', interactive && hovered >= 0 ? 'cursor-pointer' : '']"
 		@pointermove="onPointerMove"
 		@pointerleave="hovered = -1"
 		@click="onClick"
 	/>
 </template>
-
-<style scoped>
-	.dice-scene {
-		width: 100%;
-		aspect-ratio: 4 / 3;
-		border-radius: var(--radius);
-		overflow: hidden;
-		border: 1px solid var(--border);
-		background: #0d0f14;
-	}
-	.dice-scene.fill {
-		aspect-ratio: auto;
-		height: 100%;
-	}
-	.dice-scene.pointer {
-		cursor: pointer;
-	}
-	.dice-scene :deep(canvas) {
-		display: block;
-		width: 100%;
-		height: 100%;
-	}
-</style>

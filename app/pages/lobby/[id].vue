@@ -4,6 +4,7 @@
 		type Category,
 		MAX_ROLLS,
 		MIN_PLAYERS,
+		rulesetOf,
 		sheetTotal,
 	} from "#shared/game";
 	import type { LobbyNotice, LobbyState, RollAnimation } from "#shared/types";
@@ -38,7 +39,6 @@
 	let rollingFallback: ReturnType<typeof setTimeout> | undefined;
 	let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-	// --- derived state ---
 	const game = computed(() => state.value?.game ?? null);
 	const isHost = computed(() => state.value?.hostId === meId.value);
 	const inGame = computed(
@@ -48,7 +48,6 @@
 		() => !!state.value?.spectators.some((p) => p.id === meId.value),
 	);
 	const isInGame = computed(() => !!game.value?.order.includes(meId.value));
-	// Players who left keep their name from the round's snapshot.
 	const playerName = (id: string) =>
 		[...(state.value?.players ?? []), ...(state.value?.spectators ?? [])].find(
 			(p) => p.id === id,
@@ -65,7 +64,9 @@
 					id,
 					name: playerName(id),
 					connected: false,
-					total: s.game ? sheetTotal(s.game.scores[id]) : 0,
+					total: s.game
+						? sheetTotal(rulesetOf(s.ruleset), s.game.scores[id])
+						: 0,
 				},
 		);
 	});
@@ -101,11 +102,9 @@
 	const diceValues = computed(
 		() => game.value?.dice.map((d) => d.value) ?? [1, 2, 3, 4, 5],
 	);
-	/** Everyone with a score sheet this round. */
 	const roundPlayers = computed(() =>
 		orderedPlayers.value.filter((p) => game.value?.scores[p.id]),
 	);
-	// Unprefixed, so the invitee is redirected to their own language.
 	const inviteUrl = computed(() => `${location.origin}/lobby/${lobbyId}`);
 
 	const statusText = computed(() => {
@@ -142,9 +141,10 @@
 		);
 	});
 
-	// Lock page scrolling on desktop while the board is shown (see main.css).
 	useHead({
-		htmlAttrs: { class: computed(() => (inGame.value ? "game-active" : "")) },
+		htmlAttrs: {
+			class: computed(() => (inGame.value ? "lg:overflow-hidden" : "")),
+		},
 	});
 
 	function showToast(text: string) {
@@ -153,7 +153,6 @@
 		toastTimer = setTimeout(() => (toast.value = ""), 5000);
 	}
 
-	// --- server communication ---
 	async function enter() {
 		try {
 			const res = await call<{ state: LobbyState }>("lobby:enter", { lobbyId });
@@ -243,7 +242,6 @@
 		}
 	}
 
-	// --- realtime events ---
 	function onState(next: LobbyState) {
 		if (next.id === lobbyId) state.value = next;
 	}
@@ -253,7 +251,6 @@
 		rolling.value = true;
 		playDiceSound();
 		sceneRef.value?.playRoll(anim);
-		// In case the scene is not mounted or the tab is in the background.
 		clearTimeout(rollingFallback);
 		rollingFallback = setTimeout(
 			onSettled,
@@ -291,7 +288,6 @@
 	socket.on("lobby:kicked", onKicked);
 	socket.on("lobby:closed", onClosed);
 
-	// (Re-)enter whenever the socket (re-)connects.
 	watch(connected, (ok) => ok && enter(), { immediate: true });
 
 	watch(isMyTurn, (mine) => {
@@ -314,22 +310,29 @@
 </script>
 
 <template>
-	<div class="lobby-page" :class="{ 'in-game': inGame }">
-		<p v-if="status === 'loading'" class="muted center">
+	<div
+		:class="inGame ? 'lg:flex lg:h-[calc(100dvh-var(--spacing-header)-3rem)] lg:flex-col' : ''"
+	>
+		<p v-if="status === 'loading'" class="mt-12 text-center text-muted">
 			{{ $t("lobby.connecting", { id: lobbyId }) }}
 		</p>
 
-		<div v-else-if="status === 'notfound'" class="card narrow">
+		<div
+			v-else-if="status === 'notfound'"
+			class="card mx-auto my-12 max-w-[420px]"
+		>
 			<h2>{{ $t("lobby.notFoundTitle") }}</h2>
-			<p class="muted">{{ $t("lobby.notFoundText", { id: lobbyId }) }}</p>
-			<NuxtLink :to="localePath('index')" class="btn">{{
-				$t("common.toHome")
-			}}</NuxtLink>
+			<p class="mb-4 text-muted">
+				{{ $t("lobby.notFoundText", { id: lobbyId }) }}
+			</p>
+			<NuxtLink :to="localePath('index')" class="btn">
+				{{ $t("common.toHome") }}
+			</NuxtLink>
 		</div>
 
 		<form
 			v-else-if="status === 'password'"
-			class="card narrow"
+			class="card mx-auto my-12 max-w-[420px]"
 			@submit.prevent="join"
 		>
 			<h2>{{ $t("lobby.joinTitle", { id: lobbyId }) }}</h2>
@@ -343,36 +346,40 @@
 					v-focus
 				>
 			</label>
-			<p v-if="errorMsg" class="error">{{ errorMsg }}</p>
-			<button type="submit" class="btn btn-primary btn-block" :disabled="busy">
+			<p v-if="errorMsg" class="my-2 text-danger">{{ errorMsg }}</p>
+			<button type="submit" class="btn btn-primary w-full" :disabled="busy">
 				{{ $t("home.join") }}
 			</button>
 		</form>
 
-		<div v-else-if="status === 'error'" class="card narrow">
-			<p class="error">{{ errorMsg }}</p>
+		<div
+			v-else-if="status === 'error'"
+			class="card mx-auto my-12 max-w-[420px]"
+		>
+			<p class="mb-4 text-danger">{{ errorMsg }}</p>
 			<button type="button" class="btn" @click="enter">
 				{{ $t("common.retry") }}
 			</button>
 		</div>
 
 		<template v-else-if="state">
-			<header class="lobby-head">
-				<div class="title">
-					<h1>{{ state.name }}</h1>
-					<p class="muted small">
+			<header class="mb-4 flex flex-wrap items-start justify-between gap-4">
+				<div>
+					<h1 class="mb-0.5">{{ state.name }}</h1>
+					<p class="text-sm text-muted">
 						ID <code>{{ state.id }}</code> ·
+						{{ $t(`rules.${state.ruleset}.name`) }} ·
 						{{ $t("common.columns", state.columns) }} ·
 						<button type="button" class="link" @click="copyInvite">
 							{{ copied ? $t("lobby.copied") : $t("lobby.copyInvite") }}
 						</button>
 					</p>
 				</div>
-				<div class="head-actions">
+				<div class="flex flex-wrap gap-2">
 					<button
-						type="button"
 						v-if="isHost && state.phase === 'waiting'"
-						class="btn btn-ghost danger"
+						type="button"
+						class="btn btn-ghost text-danger"
 						@click="closeLobby"
 					>
 						{{ $t("lobby.close") }}
@@ -383,8 +390,11 @@
 				</div>
 			</header>
 
-			<p v-if="actionError" class="error">{{ actionError }}</p>
-			<p v-if="isSpectator" class="spectator-note">
+			<p v-if="actionError" class="my-2 text-danger">{{ actionError }}</p>
+			<p
+				v-if="isSpectator"
+				class="mb-4 rounded-xl border border-info/35 bg-info/10 px-3.5 py-2 text-info"
+			>
 				👁 {{ $t("lobby.spectatorNote") }}
 			</p>
 
@@ -398,8 +408,11 @@
 				@copy-invite="copyInvite"
 			/>
 
-			<section v-else-if="game" class="game-layout">
-				<div class="board">
+			<section
+				v-else-if="game"
+				class="grid grid-cols-1 items-start gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-stretch"
+			>
+				<div class="flex flex-col gap-3.5 lg:min-h-0">
 					<LobbyPlayersBar
 						:players="orderedPlayers"
 						:spectators="state.spectators"
@@ -421,7 +434,7 @@
 						@start="start"
 					/>
 
-					<div class="scene-wrap">
+					<div class="aspect-4/3 lg:aspect-auto lg:min-h-40 lg:flex-1">
 						<DiceScene
 							ref="sceneRef"
 							fill
@@ -432,7 +445,10 @@
 						/>
 					</div>
 
-					<div v-if="state.phase === 'playing'" class="controls">
+					<div
+						v-if="state.phase === 'playing'"
+						class="flex flex-wrap items-center justify-center gap-4 sm:justify-between"
+					>
 						<DiceTray
 							:values="diceValues"
 							:held="game.dice.map((d) => d.held)"
@@ -442,41 +458,49 @@
 						/>
 						<button
 							type="button"
-							class="btn btn-primary btn-lg roll-btn"
+							class="btn btn-primary w-full px-6 py-3 text-[1.05rem] sm:w-auto sm:min-w-[170px]"
 							:disabled="!canRoll"
 							@click="roll"
 						>
 							{{ $t("lobby.roll") }}
-							<span class="roll-count">{{ rollCount }}/{{ MAX_ROLLS }}</span>
+							<span class="text-sm opacity-70"
+								>{{ rollCount }}/{{ MAX_ROLLS }}</span
+							>
 						</button>
 					</div>
 
-					<div v-if="state.phase === 'playing'" class="status">
-						<p :class="{ mine: isMyTurn }">{{ statusText }}</p>
+					<div
+						v-if="state.phase === 'playing'"
+						class="flex min-h-9 items-center gap-4"
+					>
+						<p :class="isMyTurn ? 'font-semibold text-accent' : 'text-muted'">
+							{{ statusText }}
+						</p>
 						<button
-							type="button"
 							v-if="currentPlayer && !currentPlayer.connected && !isMyTurn"
+							type="button"
 							class="btn btn-ghost"
 							@click="skip"
 						>
 							{{ $t("lobby.skip") }}
 						</button>
 					</div>
-					<p v-if="lastActionText" class="muted small last-action">
+					<p v-if="lastActionText" class="text-sm text-muted">
 						{{ lastActionText }}
 					</p>
 				</div>
 
-				<div class="card sheet">
+				<div class="card p-3 lg:min-h-0 lg:overflow-auto">
 					<ScoreSheet
 						:players="roundPlayers"
+						:ruleset="state.ruleset"
 						:columns="state.columns"
 						:scores="game.scores"
 						:current-player-id="state.phase === 'playing' ? game.currentPlayerId : null"
 						:me-id="meId"
 						:pickable="canPick"
 						:dice="diceValues"
-						:served="rollCount === 1"
+						:served="rulesetOf(state.ruleset).hasServed && rollCount === 1"
 						:last-action="game.lastAction"
 						@pick="pick"
 					/>
@@ -484,133 +508,19 @@
 			</section>
 		</template>
 
-		<Transition name="toast">
-			<div v-if="toast" class="toast" role="status">{{ toast }}</div>
+		<Transition
+			enter-active-class="transition duration-200"
+			leave-active-class="transition duration-200"
+			enter-from-class="translate-y-2.5 opacity-0"
+			leave-to-class="translate-y-2.5 opacity-0"
+		>
+			<div
+				v-if="toast"
+				class="fixed bottom-6 left-1/2 z-50 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-[10px] border border-line bg-surface-3 px-5 py-3 shadow-card"
+				role="status"
+			>
+				{{ toast }}
+			</div>
 		</Transition>
 	</div>
 </template>
-
-<style scoped>
-	.center {
-		text-align: center;
-		margin-top: 3rem;
-	}
-	.lobby-head {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1rem;
-		margin-bottom: 1rem;
-		flex-wrap: wrap;
-	}
-	.lobby-head h1 {
-		margin-bottom: 0.15rem;
-	}
-	.head-actions {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-	.btn.danger {
-		color: var(--danger);
-	}
-
-	.spectator-note {
-		background: rgba(96, 165, 250, 0.1);
-		border: 1px solid rgba(96, 165, 250, 0.35);
-		color: #93c5fd;
-		border-radius: var(--radius);
-		padding: 0.55rem 0.9rem;
-		margin: 0 0 1rem;
-	}
-
-	.game-layout {
-		display: grid;
-		grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-		gap: 1.25rem;
-		align-items: start;
-	}
-	.board {
-		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-	}
-	.scene-wrap {
-		aspect-ratio: 4 / 3;
-	}
-
-	.controls {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-	}
-	.roll-btn {
-		min-width: 170px;
-	}
-	.roll-count {
-		font-size: 0.85rem;
-		opacity: 0.7;
-	}
-	.status {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		min-height: 2.25rem;
-	}
-	.status p {
-		margin: 0;
-		color: var(--muted);
-	}
-	.status p.mine {
-		color: var(--accent);
-		font-weight: 600;
-	}
-	.last-action {
-		margin: 0;
-	}
-
-	.sheet {
-		padding: 0.75rem;
-	}
-
-	/* Desktop: the whole game fits the viewport, nothing scrolls except the sheet. */
-	@media (min-width: 1001px) {
-		.lobby-page.in-game {
-			height: calc(100dvh - var(--header-h) - 3rem);
-			display: flex;
-			flex-direction: column;
-		}
-		.in-game .game-layout {
-			flex: 1;
-			min-height: 0;
-			align-items: stretch;
-		}
-		.in-game .board {
-			min-height: 0;
-		}
-		.in-game .scene-wrap {
-			flex: 1;
-			min-height: 160px;
-			aspect-ratio: auto;
-		}
-		.in-game .sheet {
-			min-height: 0;
-			overflow: auto;
-		}
-	}
-	@media (max-width: 1000px) {
-		.game-layout {
-			grid-template-columns: minmax(0, 1fr);
-		}
-	}
-	@media (max-width: 600px) {
-		.controls {
-			justify-content: center;
-		}
-		.roll-btn {
-			width: 100%;
-		}
-	}
-</style>

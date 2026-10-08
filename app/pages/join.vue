@@ -4,7 +4,6 @@
 	const localePath = useLocalePath();
 	const errorText = useErrorText();
 
-	// /join?id=ABC12 pre-fills the lobby ID.
 	const form = reactive({
 		lobbyId: read("id")?.toUpperCase() ?? "",
 		password: "",
@@ -32,13 +31,13 @@
 </script>
 
 <template>
-	<form class="card narrow" @submit.prevent="join">
+	<form class="card mx-auto my-12 max-w-[420px]" @submit.prevent="join">
 		<h1>{{ $t("home.joinTitle") }}</h1>
 		<label class="field">
 			<span>{{ $t("fields.lobbyId") }}</span>
 			<input
 				v-model="form.lobbyId"
-				class="input id-input"
+				class="input font-mono tracking-[0.2em] uppercase"
 				maxlength="5"
 				required
 				placeholder="ABC12"
@@ -57,21 +56,13 @@
 				v-focus="!!form.lobbyId"
 			>
 		</label>
-		<p v-if="error" class="error">{{ error }}</p>
+		<p v-if="error" class="my-2 text-danger">{{ error }}</p>
 		<button
 			type="submit"
-			class="btn btn-primary btn-block btn-lg"
+			class="btn btn-primary w-full px-6 py-3 text-[1.05rem]"
 			:disabled="busy"
 		>
 			{{ $t("home.join") }}
 		</button>
 	</form>
 </template>
-
-<style scoped>
-	.id-input {
-		text-transform: uppercase;
-		letter-spacing: 0.2em;
-		font-family: "JetBrains Mono", ui-monospace, monospace;
-	}
-</style>

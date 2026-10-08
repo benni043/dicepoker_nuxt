@@ -1,10 +1,10 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+import tailwindcss from "@tailwindcss/vite";
+
 export default defineNuxtConfig({
 	future: { compatibilityVersion: 4 },
 	compatibilityDate: "2025-05-15",
 	devtools: { enabled: true },
 	modules: ["@nuxtjs/i18n", "nuxt-auth-utils"],
-	// Everything is realtime over socket.io; pages render on the client.
 	ssr: false,
 	css: ["~/assets/css/main.css"],
 	app: {
@@ -14,14 +14,11 @@ export default defineNuxtConfig({
 		},
 	},
 	runtimeConfig: {
-		// NUXT_DATABASE_URL, e.g. postgres://user:pass@host:5432/db
 		databaseUrl: "",
-		// NUXT_MIGRATIONS_DIR; defaults to server/db/migrations in the project
 		migrationsDir: "",
 	},
 	i18n: {
 		defaultLocale: "de",
-		// Language is part of every URL: /de/..., /en/...
 		strategy: "prefix",
 		customRoutes: "config",
 		pages: {
@@ -39,13 +36,12 @@ export default defineNuxtConfig({
 		detectBrowserLanguage: {
 			useCookie: true,
 			cookieKey: "i18n_locale",
-			// Unprefixed links like /lobby/ABC12 redirect to the visitor's language.
 			redirectOn: "no prefix",
 			fallbackLocale: "de",
 		},
 	},
 	vite: {
-		// Pre-bundle up front; otherwise Vite discovers these at runtime and reloads the page.
+		plugins: [tailwindcss()],
 		optimizeDeps: {
 			include: [
 				"three",
@@ -56,8 +52,6 @@ export default defineNuxtConfig({
 		},
 	},
 	nitro: {
-		// Nuxt 4.6 imports its renderer via `nuxt/internal/*`; without inlining, the dev
-		// server resolves the client manifest to an empty stub ("Either manifest or precomputed data…").
 		externals: { inline: ["nuxt/internal"] },
 	},
 });

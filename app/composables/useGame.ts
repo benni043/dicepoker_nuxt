@@ -17,7 +17,6 @@ function ensureSocket() {
 	if (socket) return socket;
 	socket = io("/game", {
 		path: "/api/socket.io",
-		// Called on every (re)connect, so each attempt carries a fresh short-lived token.
 		auth: async (cb) => {
 			try {
 				const { token } = await $fetch<{ token: string }>("/api/socket-token");
@@ -30,7 +29,7 @@ function ensureSocket() {
 	socket.on("connect", () => (connected.value = true));
 	socket.on("disconnect", () => (connected.value = false));
 	socket.on("connect_error", async (err) => {
-		if (err.message !== "UNAUTHORIZED") return; // transport errors retry on their own
+		if (err.message !== "UNAUTHORIZED") return;
 		const session = useUserSession();
 		await session.fetch();
 		if (!session.loggedIn.value) {
@@ -68,7 +67,6 @@ async function call<T = Record<string, never>>(
 	return res as T;
 }
 
-/** Closes the realtime connection, e.g. on logout. */
 export function disconnectGame() {
 	socket?.disconnect();
 	socket = null;
@@ -82,7 +80,6 @@ export function useGame() {
 	return { socket: s, meId, connected, call };
 }
 
-/** Turns any thrown error into a translated message. */
 export function useErrorText() {
 	const { t, te } = useI18n();
 	return (err: unknown) => {

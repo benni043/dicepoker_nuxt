@@ -1,0 +1,1 @@
+ALTER TABLE "games" ADD COLUMN "ruleset" text DEFAULT 'poker' NOT NULL;

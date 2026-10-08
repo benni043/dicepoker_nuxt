@@ -56,7 +56,8 @@
 		"lobbyId": "Lobby ID",
 		"die": "Die",
 		"column": "Column",
-		"name": "Name"
+		"name": "Name",
+		"ruleset": "Rules"
 	},
 	"lobby": {
 		"connecting": "Connecting to lobby {id}…",
@@ -117,7 +118,9 @@
 	},
 	"sheet": {
 		"total": "Total",
-		"cellTitle": "{field} in column {column}"
+		"cellTitle": "{field} in column {column}",
+		"bonus": "Bonus",
+		"bonusTitle": "+{points} points if 1–6 add up to at least {threshold}"
 	},
 	"categories": {
 		"ones": "Ones",
@@ -130,7 +133,12 @@
 		"street": "Straight",
 		"poker": "Poker",
 		"grande": "Grande",
-		"doubleGrande": "Double grande"
+		"doubleGrande": "Double grande",
+		"threeOfKind": "Three of a kind",
+		"fourOfKind": "Four of a kind",
+		"smallStraight": "Small straight",
+		"largeStraight": "Large straight",
+		"chance": "Chance"
 	},
 	"stats": {
 		"title": "Statistics",
@@ -188,7 +196,8 @@
 		"UNKNOWN_FIELD": "Unknown field.",
 		"FIELD_TAKEN": "This field is already taken.",
 		"ONLY_OFFLINE_SKIP": "Only offline players can be skipped.",
-		"ONLY_IN_WAITING_ROOM": "This is only possible in the waiting room."
+		"ONLY_IN_WAITING_ROOM": "This is only possible in the waiting room.",
+		"UNKNOWN_RULESET": "Unknown rules."
 	},
 	"notFound": {
 		"title": "Page not found",
@@ -198,5 +207,33 @@
 		"playing": "Game in progress: {name}",
 		"watching": "You are watching: {name}",
 		"back": "Back to game"
+	},
+	"categoryShort": {
+		"ones": "1",
+		"twos": "2",
+		"threes": "3",
+		"fours": "4",
+		"fives": "5",
+		"sixes": "6",
+		"fullHouse": "F",
+		"street": "St",
+		"poker": "P",
+		"grande": "G",
+		"doubleGrande": "DG",
+		"threeOfKind": "3K",
+		"fourOfKind": "4K",
+		"smallStraight": "SS",
+		"largeStraight": "LS",
+		"chance": "Ch"
+	},
+	"rules": {
+		"poker": {
+			"name": "Dice poker",
+			"description": "Full house, straight, poker, grande – served scores more."
+		},
+		"kniffel": {
+			"name": "Kniffel",
+			"description": "Upper bonus from 60, of-a-kinds, straights, grande and chance."
+		}
 	}
 }

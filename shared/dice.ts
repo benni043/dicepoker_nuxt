@@ -1,13 +1,10 @@
-// Arena geometry and die orientation helpers shared by physics and rendering.
 import type { Pose, Quat } from "./types";
 
 export const DIE_SIZE = 0.5;
 export const ARENA_HALF = 2.5;
 export const WALL_HEIGHT = 0.7;
-/** Held dice rest on a ledge in front of the arena's front wall. */
 export const TRAY_Z = ARENA_HALF + 0.75;
 
-// Face layout (local outward normal -> value): +Y 1, -Y 6, +X 3, -X 4, +Z 2, -Z 5.
 export const FACE_NORMALS: { dir: [number, number, number]; value: number }[] =
 	[
 		{ dir: [0, 1, 0], value: 1 },
@@ -19,7 +16,6 @@ export const FACE_NORMALS: { dir: [number, number, number]; value: number }[] =
 	];
 
 const S = Math.SQRT1_2;
-// Rotation that turns the given face up (+Y).
 const FACE_UP: Record<number, Quat> = {
 	1: [0, 0, 0, 1],
 	6: [1, 0, 0, 0],

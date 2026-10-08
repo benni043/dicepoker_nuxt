@@ -17,14 +17,17 @@
 </script>
 
 <template>
-	<div class="login">
-		<div class="card narrow">
-			<div class="logo">⚄</div>
+	<div class="text-center">
+		<div class="card mx-auto my-12 max-w-[420px]">
+			<div class="mb-2 text-5xl leading-none text-accent">⚄</div>
 			<h1>{{ $t("login.title") }}</h1>
-			<p class="muted">{{ $t("login.subtitle") }}</p>
-			<p v-if="failed" class="error">{{ $t("login.failed") }}</p>
+			<p class="text-muted">{{ $t("login.subtitle") }}</p>
+			<p v-if="failed" class="my-2 text-danger">{{ $t("login.failed") }}</p>
 
-			<a :href="googleUrl" class="btn btn-google btn-block btn-lg">
+			<a
+				:href="googleUrl"
+				class="btn mt-4 w-full border-white bg-white px-6 py-3 text-[1.05rem] text-[#1f1f1f] hover:bg-[#e8eaed]"
+			>
 				<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
 					<path
 						fill="#FFC107"
@@ -46,9 +49,13 @@
 				{{ $t("login.google") }}
 			</a>
 
-			<form v-if="isDev" class="dev" @submit.prevent="devLogin">
-				<p class="muted small">{{ $t("login.devHint") }}</p>
-				<div class="dev-row">
+			<form
+				v-if="isDev"
+				class="mt-6 border-t border-dashed border-line pt-4"
+				@submit.prevent="devLogin"
+			>
+				<p class="mb-2 text-sm text-muted">{{ $t("login.devHint") }}</p>
+				<div class="flex gap-2">
 					<input
 						v-model="devName"
 						class="input"
@@ -56,7 +63,11 @@
 						required
 						:placeholder="$t('login.devName')"
 					>
-					<button type="submit" class="btn" :disabled="!devName.trim()">
+					<button
+						type="submit"
+						class="btn whitespace-nowrap"
+						:disabled="!devName.trim()"
+					>
 						{{ $t("login.devLogin") }}
 					</button>
 				</div>
@@ -64,36 +75,3 @@
 		</div>
 	</div>
 </template>
-
-<style scoped>
-	.login {
-		text-align: center;
-	}
-	.logo {
-		font-size: 3rem;
-		line-height: 1;
-		color: var(--accent);
-		margin-bottom: 0.5rem;
-	}
-	.btn-google {
-		margin-top: 1rem;
-		background: #fff;
-		color: #1f1f1f;
-		border-color: #fff;
-	}
-	.btn.btn-google:hover:not(:disabled) {
-		background: #e8eaed;
-	}
-	.dev {
-		margin-top: 1.5rem;
-		padding-top: 1rem;
-		border-top: 1px dashed var(--border);
-	}
-	.dev-row {
-		display: flex;
-		gap: 0.5rem;
-	}
-	.dev-row .btn {
-		white-space: nowrap;
-	}
-</style>

@@ -17,7 +17,6 @@ export function useDb() {
 	return db;
 }
 
-/** Applies pending SQL migrations (generated with `pnpm db:generate`) once per process. */
 export function dbReady(): Promise<void> {
 	migrated ??= (async () => {
 		const folder =
@@ -25,7 +24,7 @@ export function dbReady(): Promise<void> {
 			resolve(process.cwd(), "server/db/migrations");
 		await migrate(useDb(), { migrationsFolder: folder });
 	})().catch((err) => {
-		migrated = null; // retry on the next call, e.g. once the database is up
+		migrated = null;
 		throw err;
 	});
 	return migrated;

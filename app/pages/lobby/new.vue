@@ -1,5 +1,11 @@
 <script setup lang="ts">
-	import { MAX_COLUMNS, MAX_PLAYERS, MIN_PLAYERS } from "#shared/game";
+	import {
+		MAX_COLUMNS,
+		MAX_PLAYERS,
+		MIN_PLAYERS,
+		RULESET_IDS,
+		type RulesetId,
+	} from "#shared/game";
 
 	const { call } = useGame();
 	const { user } = useUserSession();
@@ -10,9 +16,16 @@
 	const form = reactive({
 		name: t("home.defaultLobbyName", { name: user.value?.name }),
 		password: "",
+		ruleset: "poker" as RulesetId,
 		columns: 3,
 		maxPlayers: 4,
 	});
+
+	const DEFAULT_COLUMNS: Record<RulesetId, number> = { poker: 3, kniffel: 1 };
+	watch(
+		() => form.ruleset,
+		(ruleset) => (form.columns = DEFAULT_COLUMNS[ruleset]),
+	);
 	const error = ref("");
 	const busy = ref(false);
 
@@ -33,7 +46,7 @@
 </script>
 
 <template>
-	<form class="card narrow" @submit.prevent="create">
+	<form class="card mx-auto my-12 max-w-[420px]" @submit.prevent="create">
 		<h1>{{ $t("home.createTitle") }}</h1>
 		<label class="field">
 			<span>{{ $t("fields.lobbyName") }}</span>
@@ -51,7 +64,32 @@
 				v-focus
 			>
 		</label>
-		<div class="row">
+		<fieldset class="field">
+			<legend class="mb-1.5">{{ $t("fields.ruleset") }}</legend>
+			<div class="grid grid-cols-2 gap-2">
+				<label
+					v-for="id in RULESET_IDS"
+					:key="id"
+					class="cursor-pointer rounded-lg border p-3 transition-colors has-focus-visible:ring-3 has-focus-visible:ring-accent/15"
+					:class="form.ruleset === id ? 'border-accent bg-accent/10 text-ink' : 'border-line bg-surface-2 hover:border-muted'"
+				>
+					<input
+						v-model="form.ruleset"
+						type="radio"
+						name="ruleset"
+						:value="id"
+						class="sr-only"
+					>
+					<span class="block font-semibold text-ink">
+						{{ $t(`rules.${id}.name`) }}
+					</span>
+					<span class="block text-xs leading-snug text-muted">
+						{{ $t(`rules.${id}.description`) }}
+					</span>
+				</label>
+			</div>
+		</fieldset>
+		<div class="grid grid-cols-2 gap-3">
 			<label class="field">
 				<span>{{ $t("fields.columns") }}</span>
 				<select v-model.number="form.columns" class="input">
@@ -71,21 +109,13 @@
 				</select>
 			</label>
 		</div>
-		<p v-if="error" class="error">{{ error }}</p>
+		<p v-if="error" class="my-2 text-danger">{{ error }}</p>
 		<button
 			type="submit"
-			class="btn btn-primary btn-block btn-lg"
+			class="btn btn-primary w-full px-6 py-3 text-[1.05rem]"
 			:disabled="busy"
 		>
 			{{ $t("home.create") }}
 		</button>
 	</form>
 </template>
-
-<style scoped>
-	.row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.75rem;
-	}
-</style>

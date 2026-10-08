@@ -3,7 +3,7 @@ import { ARENA_HALF, DIE_SIZE, FACE_NORMALS } from "#shared/dice";
 import type { DieState, Pose } from "#shared/types";
 
 const STEP = 1 / 60;
-const FPS = 30; // recorded frame rate; clients interpolate between frames
+const FPS = 30;
 const MAX_STEPS = 60 * 8;
 const CEILING = 2.2;
 const MAX_ATTEMPTS = 12;
@@ -92,7 +92,6 @@ function runOnce(indices: number[]) {
 			sleepSpeedLimit: 0.15,
 			sleepTimeLimit: 0.25,
 		});
-		// Thrown from the front edge towards the back wall.
 		body.position.set(
 			(k - (n - 1) / 2) * 0.65 + rand(-0.08, 0.08),
 			rand(0.9, 1.3),
@@ -137,7 +136,6 @@ function runOnce(indices: number[]) {
 	if (step % 2 !== 0) record();
 
 	const faces = bodies.map(readFace);
-	// Reject dice that lean against a wall or lie on another die.
 	const clean =
 		faces.every((f) => f.dot > 0.97) &&
 		bodies.every((b) => b.position.y < HALF * 1.2);
@@ -162,7 +160,6 @@ function runOnce(indices: number[]) {
 	};
 }
 
-/** Simulates throwing every die that is not held; retries until all dice lie flat. */
 export function simulateRoll(dice: DieState[]): SimulatedRoll {
 	const indices = dice.flatMap((d, i) => (d.held ? [] : [i]));
 	let result = runOnce(indices);

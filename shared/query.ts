@@ -1,5 +1,3 @@
-// Query parameters are localized like the paths: /de/anmelden?ziel=… vs. /en/login?redirect=…
-
 export type QueryKey = "redirect" | "notice" | "error" | "id";
 
 const KEYS: Record<string, Record<QueryKey, string>> = {
@@ -12,7 +10,6 @@ const VALUES: Record<string, Record<string, string>> = {
 	en: {},
 };
 
-/** Builds a query object with the parameter names/values of the given language. */
 export function localizedQuery(
 	locale: string,
 	params: Partial<Record<QueryKey, string>>,
@@ -25,7 +22,6 @@ export function localizedQuery(
 	);
 }
 
-/** Reads a parameter under any language's name (links keep working after switching language). */
 export function readLocalizedQuery(
 	query: Record<string, unknown>,
 	key: QueryKey,
