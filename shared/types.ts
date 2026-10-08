@@ -130,6 +130,7 @@ export interface PublicDicePreset {
 	name: string;
 	owner: string;
 	layout: DiceLayout;
+	saved: boolean;
 }
 
 export interface DesignSettings {

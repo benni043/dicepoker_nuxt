@@ -269,8 +269,6 @@
 		"publicTitle": "Öffentliche Presets",
 		"searchPlaceholder": "Nach Namen suchen…",
 		"by": "von {name}",
-		"add": "Hinzufügen",
-		"added": "Hinzugefügt",
 		"noResults": "Keine öffentlichen Presets gefunden.",
 		"tooManyImages": "Zu viele Bilder (maximal 100).",
 		"tooManyPresets": "Zu viele Presets (maximal 30).",
@@ -280,6 +278,11 @@
 		"lobbyDesignHint": "Gilt für alle in der Lobby – außer sie nutzen immer ihr eigenes.",
 		"none": "Standard (Augen)",
 		"change": "Ändern…",
-		"usingOwn": "Du nutzt immer dein eigenes Würfel-Design (Einstellungen)."
+		"usingOwn": "Du nutzt immer dein eigenes Würfel-Design (Einstellungen).",
+		"savedPresets": "Gespeicherte Presets",
+		"save": "Speichern",
+		"saved": "Gespeichert ✓",
+		"remove": "Entfernen",
+		"tooManySaved": "Zu viele gespeicherte Presets (maximal 50)."
 	}
 }

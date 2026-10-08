@@ -1,10 +1,15 @@
-import { getDesignSettings, listPresets } from "../../game/designs";
+import {
+	getDesignSettings,
+	listPresets,
+	listSavedPresets,
+} from "../../game/designs";
 
 export default defineEventHandler(async (event) => {
 	const { user } = await requireUserSession(event);
-	const [presets, settings] = await Promise.all([
+	const [presets, saved, settings] = await Promise.all([
 		listPresets(user.id),
+		listSavedPresets(user.id),
 		getDesignSettings(user.id),
 	]);
-	return { presets, settings };
+	return { presets, saved, settings };
 });

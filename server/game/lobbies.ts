@@ -26,7 +26,7 @@ import type {
 	PublicPlayer,
 	RollAnimation,
 } from "#shared/types";
-import { getPreset } from "./designs";
+import { getUsablePreset } from "./designs";
 import { simulateRoll } from "./physics";
 import {
 	deleteLobbyRecord,
@@ -499,7 +499,7 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 			return null;
 		const preset =
 			typeof presetId === "string" && /^[0-9a-f-]{36}$/.test(presetId)
-				? await getPreset(me, presetId)
+				? await getUsablePreset(me, presetId)
 				: null;
 		if (!preset) throw new GameError("INVALID_PRESET");
 		return { name: preset.name, layout: preset.layout };

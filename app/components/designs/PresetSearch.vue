@@ -2,12 +2,11 @@
 	import type { PublicDicePreset } from "#shared/types";
 
 	const { t } = useI18n();
-	const { searchPublic, importPreset } = useDiceDesigns();
+	const { saved, searchPublic, savePreset, unsavePreset } = useDiceDesigns();
 
 	const query = ref("");
 	const results = ref<PublicDicePreset[]>([]);
 	const searched = ref(false);
-	const added = ref(new Set<string>());
 	const error = ref("");
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -23,19 +22,19 @@
 
 	onMounted(search);
 
-	async function add(preset: PublicDicePreset) {
+	const isSaved = (id: string) => saved.value.some((p) => p.id === id);
+
+	async function toggle(preset: PublicDicePreset) {
 		error.value = "";
 		try {
-			await importPreset(preset.id);
-			added.value = new Set([...added.value, preset.id]);
+			if (isSaved(preset.id)) await unsavePreset(preset.id);
+			else await savePreset(preset);
 		} catch (e) {
 			const code = (e as { statusMessage?: string }).statusMessage;
 			error.value =
-				code === "TOO_MANY_IMAGES"
-					? t("designs.tooManyImages")
-					: code === "TOO_MANY_PRESETS"
-						? t("designs.tooManyPresets")
-						: t("errors.INTERNAL");
+				code === "TOO_MANY_SAVED"
+					? t("designs.tooManySaved")
+					: t("errors.INTERNAL");
 		}
 	}
 </script>
@@ -65,10 +64,10 @@
 				<button
 					type="button"
 					class="btn px-3 py-1.5 text-sm"
-					:disabled="added.has(preset.id)"
-					@click="add(preset)"
+					:class="{ 'btn-primary': isSaved(preset.id) }"
+					@click="toggle(preset)"
 				>
-					{{ added.has(preset.id) ? $t("designs.added") : $t("designs.add") }}
+					{{ isSaved(preset.id) ? $t("designs.saved") : $t("designs.save") }}
 				</button>
 			</li>
 		</ul>

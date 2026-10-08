@@ -269,8 +269,6 @@
 		"publicTitle": "Public presets",
 		"searchPlaceholder": "Search by name…",
 		"by": "by {name}",
-		"add": "Add",
-		"added": "Added",
 		"noResults": "No public presets found.",
 		"tooManyImages": "Too many images (max. 100).",
 		"tooManyPresets": "Too many presets (max. 30).",
@@ -280,6 +278,11 @@
 		"lobbyDesignHint": "Applies to everyone in the lobby – unless they always use their own.",
 		"none": "Standard (pips)",
 		"change": "Change…",
-		"usingOwn": "You always use your own dice design (settings)."
+		"usingOwn": "You always use your own dice design (settings).",
+		"savedPresets": "Saved presets",
+		"save": "Save",
+		"saved": "Saved ✓",
+		"remove": "Remove",
+		"tooManySaved": "Too many saved presets (max. 50)."
 	}
 }

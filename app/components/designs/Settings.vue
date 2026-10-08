@@ -4,8 +4,10 @@
 	const { t } = useI18n();
 	const {
 		presets,
+		saved,
 		settings,
 		load,
+		unsavePreset,
 		createPreset,
 		updatePreset,
 		deletePreset,
@@ -74,10 +76,7 @@
 					:value="settings.defaultPresetId ?? ''"
 					@change="onDefaultChange"
 				>
-					<option value="">{{ $t("designs.standard") }}</option>
-					<option v-for="p in presets" :key="p.id" :value="p.id">
-						{{ p.name }}
-					</option>
+					<DesignsPresetOptions />
 				</select>
 			</label>
 			<div class="flex items-start gap-3">
@@ -113,7 +112,6 @@
 				v-for="p in presets"
 				:key="p.id"
 				class="flex flex-wrap items-center gap-2.5 border-b border-line py-2.5"
-				:class="{ 'bg-accent/5': p.id === editingId }"
 			>
 				<DesignsPresetPreview :layout="p.layout" />
 				<input
@@ -166,6 +164,34 @@
 			</button>
 		</form>
 		<p v-if="error" class="mt-2 text-sm text-danger">{{ error }}</p>
+
+		<template v-if="saved.length">
+			<h3 class="mt-6 mb-2 text-[0.95rem] text-muted">
+				{{ $t("designs.savedPresets") }}
+			</h3>
+			<ul>
+				<li
+					v-for="p in saved"
+					:key="p.id"
+					class="flex flex-wrap items-center gap-2.5 border-b border-line py-2.5 last:border-b-0"
+				>
+					<DesignsPresetPreview :layout="p.layout" />
+					<div class="min-w-0 flex-1">
+						<div class="truncate text-sm font-semibold">{{ p.name }}</div>
+						<div class="text-xs text-muted">
+							{{ $t("designs.by", { name: p.owner }) }}
+						</div>
+					</div>
+					<button
+						type="button"
+						class="link text-sm text-danger"
+						@click="unsavePreset(p.id)"
+					>
+						{{ $t("designs.remove") }}
+					</button>
+				</li>
+			</ul>
+		</template>
 	</section>
 
 	<section v-if="editing" class="card">

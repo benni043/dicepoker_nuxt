@@ -110,3 +110,19 @@ export const dicePresets = pgTable(
 		index("dice_presets_public_idx").on(t.isPublic),
 	],
 );
+
+export const dicePresetSaves = pgTable(
+	"dice_preset_saves",
+	{
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		presetId: uuid("preset_id")
+			.notNull()
+			.references(() => dicePresets.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [primaryKey({ columns: [t.userId, t.presetId] })],
+);

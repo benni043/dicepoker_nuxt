@@ -1,5 +1,5 @@
 import type { DesignSettings } from "#shared/types";
-import { getPreset, updateDesignSettings } from "../../game/designs";
+import { getUsablePreset, updateDesignSettings } from "../../game/designs";
 
 export default defineEventHandler(async (event) => {
 	const { user } = await requireUserSession(event);
@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 	if (typeof body?.alwaysOwn === "boolean") changes.alwaysOwn = body.alwaysOwn;
 	if (body?.defaultPresetId === null) changes.defaultPresetId = null;
 	else if (typeof body?.defaultPresetId === "string") {
-		if (!(await getPreset(user.id, body.defaultPresetId)))
+		if (!(await getUsablePreset(user.id, body.defaultPresetId)))
 			throw createError({ statusCode: 400, statusMessage: "INVALID_PRESET" });
 		changes.defaultPresetId = body.defaultPresetId;
 	}

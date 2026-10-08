@@ -4,7 +4,7 @@
 	defineProps<{ design: LobbyDesign | null; isHost: boolean }>();
 	const emit = defineEmits<{ change: [presetId: string | null] }>();
 
-	const { presets, settings } = useDiceDesigns();
+	const { settings } = useDiceDesigns();
 
 	function onChange(event: Event) {
 		const select = event.target as HTMLSelectElement;
@@ -29,10 +29,7 @@
 			@change="onChange"
 		>
 			<option value="keep" disabled>{{ $t("designs.change") }}</option>
-			<option value="">{{ $t("designs.none") }}</option>
-			<option v-for="p in presets" :key="p.id" :value="p.id">
-				{{ p.name }}
-			</option>
+			<DesignsPresetOptions />
 		</select>
 		<span v-if="settings.alwaysOwn" class="w-full text-xs text-muted">
 			{{ $t("designs.usingOwn") }}

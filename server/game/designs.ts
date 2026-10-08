@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, ne } from "drizzle-orm";
 import { DICE_COUNT } from "#shared/game";
 import type {
 	DesignSettings,
@@ -9,10 +9,11 @@ import type {
 } from "#shared/types";
 import { dbReady, schema, useDb } from "../db";
 
-const { users, diceImages, dicePresets } = schema;
+const { users, diceImages, dicePresets, dicePresetSaves } = schema;
 
 export const MAX_IMAGES = 100;
 export const MAX_PRESETS = 30;
+export const MAX_SAVED = 50;
 
 const presetColumns = {
 	id: dicePresets.id,
@@ -153,21 +154,30 @@ export async function deletePreset(userId: string, id: string) {
 		.where(and(eq(dicePresets.id, id), eq(dicePresets.userId, userId)));
 }
 
+const publicColumns = {
+	id: dicePresets.id,
+	name: dicePresets.name,
+	owner: users.name,
+	layout: dicePresets.layout,
+};
+
 export async function searchPublicPresets(
 	userId: string,
 	query: string,
 ): Promise<PublicDicePreset[]> {
 	await dbReady();
 	const escaped = query.replace(/[\\%_]/g, (c) => `\\${c}`);
-	return await useDb()
-		.select({
-			id: dicePresets.id,
-			name: dicePresets.name,
-			owner: users.name,
-			layout: dicePresets.layout,
-		})
+	const rows = await useDb()
+		.select({ ...publicColumns, savedBy: dicePresetSaves.userId })
 		.from(dicePresets)
 		.innerJoin(users, eq(users.id, dicePresets.userId))
+		.leftJoin(
+			dicePresetSaves,
+			and(
+				eq(dicePresetSaves.presetId, dicePresets.id),
+				eq(dicePresetSaves.userId, userId),
+			),
+		)
 		.where(
 			and(
 				eq(dicePresets.isPublic, true),
@@ -177,59 +187,76 @@ export async function searchPublicPresets(
 		)
 		.orderBy(desc(dicePresets.createdAt))
 		.limit(20);
+	return rows.map(({ savedBy, ...preset }) => ({
+		...preset,
+		saved: !!savedBy,
+	}));
 }
 
-export class DesignLimitError extends Error {}
-
-export async function importPreset(
+export async function listSavedPresets(
 	userId: string,
-	presetId: string,
-): Promise<DicePreset | null> {
+): Promise<PublicDicePreset[]> {
 	await dbReady();
-	const db = useDb();
-	const [source] = await db
-		.select({ name: dicePresets.name, layout: dicePresets.layout })
+	const rows = await useDb()
+		.select(publicColumns)
+		.from(dicePresetSaves)
+		.innerJoin(dicePresets, eq(dicePresets.id, dicePresetSaves.presetId))
+		.innerJoin(users, eq(users.id, dicePresets.userId))
+		.where(
+			and(eq(dicePresetSaves.userId, userId), eq(dicePresets.isPublic, true)),
+		)
+		.orderBy(asc(dicePresetSaves.createdAt));
+	return rows.map((preset) => ({ ...preset, saved: true }));
+}
+
+export async function countSavedPresets(userId: string): Promise<number> {
+	await dbReady();
+	const [row] = await useDb()
+		.select({ n: count() })
+		.from(dicePresetSaves)
+		.where(eq(dicePresetSaves.userId, userId));
+	return row?.n ?? 0;
+}
+
+export async function savePreset(userId: string, presetId: string) {
+	await dbReady();
+	const [preset] = await useDb()
+		.select({ id: dicePresets.id })
 		.from(dicePresets)
-		.where(and(eq(dicePresets.id, presetId), eq(dicePresets.isPublic, true)));
-	if (!source) return null;
-
-	const imageIds = [
-		...new Set(source.layout.flat().filter((id): id is string => !!id)),
-	];
-	if ((await countPresets(userId)) >= MAX_PRESETS)
-		throw new DesignLimitError("TOO_MANY_PRESETS");
-	if ((await countImages(userId)) + imageIds.length > MAX_IMAGES)
-		throw new DesignLimitError("TOO_MANY_IMAGES");
-
-	return await db.transaction(async (tx) => {
-		const originals = imageIds.length
-			? await tx
-					.select()
-					.from(diceImages)
-					.where(inArray(diceImages.id, imageIds))
-			: [];
-		const copies = new Map<string, string>();
-		for (const image of originals) {
-			const [copy] = await tx
-				.insert(diceImages)
-				.values({
-					userId,
-					name: image.name,
-					mime: image.mime,
-					data: image.data,
-				})
-				.returning({ id: diceImages.id });
-			copies.set(image.id, copy!.id);
-		}
-		const layout = source.layout.map((die) =>
-			die.map((face) => (face ? (copies.get(face) ?? null) : null)),
+		.where(
+			and(
+				eq(dicePresets.id, presetId),
+				eq(dicePresets.isPublic, true),
+				ne(dicePresets.userId, userId),
+			),
 		);
-		const [preset] = await tx
-			.insert(dicePresets)
-			.values({ userId, name: source.name, layout })
-			.returning(presetColumns);
-		return preset!;
-	});
+	if (!preset) return false;
+	await useDb()
+		.insert(dicePresetSaves)
+		.values({ userId, presetId })
+		.onConflictDoNothing();
+	return true;
+}
+
+export async function unsavePreset(userId: string, presetId: string) {
+	await dbReady();
+	await useDb()
+		.delete(dicePresetSaves)
+		.where(
+			and(
+				eq(dicePresetSaves.userId, userId),
+				eq(dicePresetSaves.presetId, presetId),
+			),
+		);
+}
+
+export async function getUsablePreset(
+	userId: string,
+	id: string,
+): Promise<{ name: string; layout: DiceLayout } | null> {
+	const own = await getPreset(userId, id);
+	if (own) return own;
+	return (await listSavedPresets(userId)).find((p) => p.id === id) ?? null;
 }
 
 export async function getDesignSettings(

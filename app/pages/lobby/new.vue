@@ -12,7 +12,7 @@
 	const { t } = useI18n();
 	const localePath = useLocalePath();
 	const errorText = useErrorText();
-	const { presets, settings, load } = useDiceDesigns();
+	const { settings, load } = useDiceDesigns();
 
 	const form = reactive({
 		name: t("home.defaultLobbyName", { name: user.value?.name }),
@@ -99,10 +99,7 @@
 		<label class="field">
 			<span>{{ $t("designs.lobbyDesign") }}</span>
 			<select v-model="form.presetId" class="input">
-				<option value="">{{ $t("designs.none") }}</option>
-				<option v-for="p in presets" :key="p.id" :value="p.id">
-					{{ p.name }}
-				</option>
+				<DesignsPresetOptions />
 			</select>
 		</label>
 		<div class="grid grid-cols-2 gap-3">

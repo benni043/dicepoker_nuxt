@@ -11,6 +11,7 @@ const TEXTURE_SIZE = 256;
 
 const images = ref<DiceImage[]>([]);
 const presets = ref<DicePreset[]>([]);
+const saved = ref<PublicDicePreset[]>([]);
 const settings = ref<DesignSettings>({
 	defaultPresetId: null,
 	alwaysOwn: false,
@@ -53,9 +54,13 @@ function replacePreset(preset: DicePreset) {
 }
 
 export function useDiceDesigns() {
+	const selectable = computed<
+		{ id: string; name: string; layout: DiceLayout }[]
+	>(() => [...presets.value, ...saved.value]);
+
 	const ownLayout = computed<DiceLayout | null>(
 		() =>
-			presets.value.find((p) => p.id === settings.value.defaultPresetId)
+			selectable.value.find((p) => p.id === settings.value.defaultPresetId)
 				?.layout ?? null,
 	);
 
@@ -67,13 +72,16 @@ export function useDiceDesigns() {
 	function load() {
 		loading ??= Promise.all([
 			$fetch<DiceImage[]>("/api/dice/images"),
-			$fetch<{ presets: DicePreset[]; settings: DesignSettings }>(
-				"/api/dice/presets",
-			),
+			$fetch<{
+				presets: DicePreset[];
+				saved: PublicDicePreset[];
+				settings: DesignSettings;
+			}>("/api/dice/presets"),
 		])
 			.then(([imageList, data]) => {
 				images.value = imageList;
 				presets.value = data.presets;
+				saved.value = data.saved;
 				settings.value = data.settings;
 			})
 			.catch(() => {
@@ -164,19 +172,23 @@ export function useDiceDesigns() {
 	const searchPublic = (q: string) =>
 		$fetch<PublicDicePreset[]>("/api/dice/presets/public", { query: { q } });
 
-	async function importPreset(id: string) {
-		const preset = await $fetch<DicePreset>(`/api/dice/presets/${id}/import`, {
-			method: "POST",
-		});
-		presets.value = [...presets.value, preset];
-		const list = await $fetch<DiceImage[]>("/api/dice/images");
-		images.value = list;
-		return preset;
+	async function savePreset(preset: PublicDicePreset) {
+		await $fetch(`/api/dice/presets/${preset.id}/save`, { method: "POST" });
+		saved.value = [...saved.value, { ...preset, saved: true }];
+	}
+
+	async function unsavePreset(id: string) {
+		await $fetch(`/api/dice/presets/${id}/save`, { method: "DELETE" });
+		saved.value = saved.value.filter((p) => p.id !== id);
+		if (settings.value.defaultPresetId === id)
+			await updateSettings({ defaultPresetId: null });
 	}
 
 	return {
 		images,
 		presets,
+		saved,
+		selectable,
 		settings,
 		ownLayout,
 		layoutFor,
@@ -189,6 +201,7 @@ export function useDiceDesigns() {
 		deletePreset,
 		updateSettings,
 		searchPublic,
-		importPreset,
+		savePreset,
+		unsavePreset,
 	};
 }
