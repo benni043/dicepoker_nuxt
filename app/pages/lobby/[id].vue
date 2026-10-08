@@ -210,7 +210,7 @@
 		if (canHold.value) action("game:hold", { index });
 	}
 
-	function pick(column: number, category: Category, points: number) {
+	async function pick(column: number, category: Category, points: number) {
 		if (
 			points === 0 &&
 			!confirm(
@@ -221,7 +221,8 @@
 			)
 		)
 			return;
-		action("game:score", { column, category });
+		if (await action("game:score", { column, category }))
+			scrollTo(boardRef.value);
 	}
 
 	async function leave() {
