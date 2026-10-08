@@ -1,5 +1,7 @@
 import {
+	type AnyPgColumn,
 	boolean,
+	customType,
 	index,
 	integer,
 	jsonb,
@@ -9,6 +11,11 @@ import {
 	timestamp,
 	uuid,
 } from "drizzle-orm/pg-core";
+import type { DiceLayout } from "#shared/types";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+	dataType: () => "bytea",
+});
 
 export const users = pgTable("users", {
 	id: uuid("id").primaryKey().defaultRandom(),
@@ -16,6 +23,11 @@ export const users = pgTable("users", {
 	email: text("email"),
 	name: text("name").notNull(),
 	avatarUrl: text("avatar_url"),
+	defaultPresetId: uuid("default_preset_id").references(
+		(): AnyPgColumn => dicePresets.id,
+		{ onDelete: "set null" },
+	),
+	alwaysOwnDesign: boolean("always_own_design").notNull().default(false),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.notNull()
 		.defaultNow(),
@@ -59,5 +71,42 @@ export const gamePlayers = pgTable(
 	(t) => [
 		primaryKey({ columns: [t.gameId, t.userId] }),
 		index("game_players_user_idx").on(t.userId),
+	],
+);
+
+export const diceImages = pgTable(
+	"dice_images",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		mime: text("mime").notNull(),
+		data: bytea("data").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [index("dice_images_user_idx").on(t.userId)],
+);
+
+export const dicePresets = pgTable(
+	"dice_presets",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		layout: jsonb("layout").$type<DiceLayout>().notNull(),
+		isPublic: boolean("is_public").notNull().default(false),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [
+		index("dice_presets_user_idx").on(t.userId),
+		index("dice_presets_public_idx").on(t.isPublic),
 	],
 );

@@ -9,12 +9,19 @@
 		trayPose,
 		WALL_HEIGHT,
 	} from "#shared/dice";
-	import type { DieState, Pose, RollAnimation } from "#shared/types";
+	import type {
+		DiceLayout,
+		DieState,
+		Pose,
+		RollAnimation,
+	} from "#shared/types";
+	import { diceImageUrl } from "~/composables/useDiceDesigns";
 
 	const props = defineProps<{
 		dice: DieState[];
 		interactive: boolean;
 		fill?: boolean;
+		skin?: DiceLayout | null;
 	}>();
 
 	const emit = defineEmits<{
@@ -71,6 +78,9 @@
 	const basePositions: THREE.Vector3[] = [];
 	const dieMaterials: THREE.MeshStandardMaterial[][] = [];
 	const disposables: { dispose(): void }[] = [];
+	let defaultTextures: THREE.Texture[] = [];
+	const imageTextures = new Map<string, THREE.Texture>();
+	const textureLoader = new THREE.TextureLoader();
 
 	const raycaster = new THREE.Raycaster();
 	const pointer = new THREE.Vector2();
@@ -204,12 +214,12 @@
 			DIE_SIZE,
 			DIE_SIZE,
 			4,
-			DIE_SIZE * 0.12,
+			DIE_SIZE * 0.07,
 		);
 		disposables.push(dieGeometry);
-		const textures = FACE_ORDER.map(faceTexture);
+		defaultTextures = FACE_ORDER.map(faceTexture);
 		for (let i = 0; i < props.dice.length; i++) {
-			const materials = textures.map(
+			const materials = defaultTextures.map(
 				(map) => new THREE.MeshStandardMaterial({ map, roughness: 0.35 }),
 			);
 			disposables.push(...materials);
@@ -324,6 +334,33 @@
 		if (index >= 0) emit("toggle", index);
 	}
 
+	function imageTexture(id: string) {
+		let texture = imageTextures.get(id);
+		if (!texture) {
+			texture = textureLoader.load(diceImageUrl(id));
+			texture.colorSpace = THREE.SRGBColorSpace;
+			texture.anisotropy = 4;
+			imageTextures.set(id, texture);
+		}
+		return texture;
+	}
+
+	function applySkin() {
+		dieMaterials.forEach((materials, die) => {
+			materials.forEach((material, k) => {
+				const id = props.skin?.[die]?.[FACE_ORDER[k]! - 1];
+				const map = id ? imageTexture(id) : defaultTextures[k]!;
+				if (material.map !== map) {
+					material.map = map;
+					material.roughness = id ? 0.8 : 0.35;
+					material.needsUpdate = true;
+				}
+			});
+		});
+	}
+
+	watch(() => props.skin, applySkin, { deep: true });
+
 	function playRoll(roll: RollAnimation) {
 		anim = { ...roll, start: performance.now() };
 	}
@@ -332,6 +369,7 @@
 
 	onMounted(() => {
 		buildScene();
+		applySkin();
 		resize();
 		resizeObserver = new ResizeObserver(resize);
 		resizeObserver.observe(host.value!);
@@ -342,6 +380,7 @@
 		cancelAnimationFrame(frameId);
 		resizeObserver?.disconnect();
 		for (const d of disposables) d.dispose();
+		for (const texture of imageTextures.values()) texture.dispose();
 		renderer?.dispose();
 		renderer?.domElement.remove();
 		renderer = null;

@@ -68,6 +68,8 @@
 			</div>
 		</section>
 
+		<DesignsSettings />
+
 		<section class="card">
 			<h2>{{ $t("settings.account") }}</h2>
 			<div class="flex items-center gap-3">

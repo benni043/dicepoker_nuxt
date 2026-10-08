@@ -51,6 +51,7 @@ export interface LobbyState {
 	phase: LobbyPhase;
 	players: PublicPlayer[];
 	spectators: PublicPlayer[];
+	design: LobbyDesign | null;
 	game: GameState | null;
 	winners: string[];
 }
@@ -108,4 +109,35 @@ export interface LobbyNotice {
 	lobbyId: string;
 	code: "playerLeft" | "notEnoughPlayers" | "abandoned";
 	params?: Record<string, string | number>;
+}
+
+export type DiceLayout = (string | null)[][];
+
+export interface DiceImage {
+	id: string;
+	name: string;
+}
+
+export interface DicePreset {
+	id: string;
+	name: string;
+	layout: DiceLayout;
+	isPublic: boolean;
+}
+
+export interface PublicDicePreset {
+	id: string;
+	name: string;
+	owner: string;
+	layout: DiceLayout;
+}
+
+export interface DesignSettings {
+	defaultPresetId: string | null;
+	alwaysOwn: boolean;
+}
+
+export interface LobbyDesign {
+	name: string;
+	layout: DiceLayout;
 }

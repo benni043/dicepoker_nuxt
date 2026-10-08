@@ -12,6 +12,7 @@
 	const { t } = useI18n();
 	const localePath = useLocalePath();
 	const errorText = useErrorText();
+	const { presets, settings, load } = useDiceDesigns();
 
 	const form = reactive({
 		name: t("home.defaultLobbyName", { name: user.value?.name }),
@@ -19,6 +20,12 @@
 		ruleset: "poker" as RulesetId,
 		columns: 3,
 		maxPlayers: 4,
+		presetId: "",
+	});
+
+	onMounted(async () => {
+		await load();
+		form.presetId = settings.value.defaultPresetId ?? "";
 	});
 
 	const DEFAULT_COLUMNS: Record<RulesetId, number> = { poker: 3, kniffel: 1 };
@@ -89,6 +96,15 @@
 				</label>
 			</div>
 		</fieldset>
+		<label class="field">
+			<span>{{ $t("designs.lobbyDesign") }}</span>
+			<select v-model="form.presetId" class="input">
+				<option value="">{{ $t("designs.none") }}</option>
+				<option v-for="p in presets" :key="p.id" :value="p.id">
+					{{ p.name }}
+				</option>
+			</select>
+		</label>
 		<div class="grid grid-cols-2 gap-3">
 			<label class="field">
 				<span>{{ $t("fields.columns") }}</span>

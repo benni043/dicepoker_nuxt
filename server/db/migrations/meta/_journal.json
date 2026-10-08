@@ -15,6 +15,27 @@
 			"when": 1791443996992,
 			"tag": "0001_fearless_vision",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1791452375927,
+			"tag": "0002_strange_roxanne_simpson",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1791453797623,
+			"tag": "0003_mushy_wolverine",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1791453798422,
+			"tag": "0004_lethal_hiroim",
+			"breakpoints": true
 		}
 	]
 }

@@ -18,6 +18,7 @@ import {
 import type {
 	DieState,
 	LastAction,
+	LobbyDesign,
 	LobbyNotice,
 	LobbyPhase,
 	LobbyState,
@@ -25,6 +26,7 @@ import type {
 	PublicPlayer,
 	RollAnimation,
 } from "#shared/types";
+import { getPreset } from "./designs";
 import { simulateRoll } from "./physics";
 import {
 	deleteLobbyRecord,
@@ -60,6 +62,7 @@ interface Lobby {
 	passwordHash: string;
 	hostId: string;
 	ruleset: RulesetId;
+	design: LobbyDesign | null;
 	columns: number;
 	maxPlayers: number;
 	phase: LobbyPhase;
@@ -109,6 +112,7 @@ function ensureLoaded() {
 			if (Date.now() - updatedAt.getTime() < LOBBY_TTL) {
 				lobby.spectators ??= [];
 				lobby.ruleset ??= "poker";
+				lobby.design ??= null;
 				if (lobby.game)
 					lobby.game.names ??= Object.fromEntries(
 						lobby.players.map((p) => [p.id, p.name]),
@@ -166,6 +170,7 @@ function publicState(lobby: Lobby): LobbyState {
 		name: lobby.name,
 		hostId: lobby.hostId,
 		ruleset: lobby.ruleset,
+		design: lobby.design,
 		columns: lobby.columns,
 		maxPlayers: lobby.maxPlayers,
 		phase: lobby.phase,
@@ -487,11 +492,25 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 
 	const myName = async () => (await getUser(me))?.name ?? "?";
 
+	async function designFromPreset(
+		presetId: unknown,
+	): Promise<LobbyDesign | null> {
+		if (presetId === null || presetId === undefined || presetId === "")
+			return null;
+		const preset =
+			typeof presetId === "string" && /^[0-9a-f-]{36}$/.test(presetId)
+				? await getPreset(me, presetId)
+				: null;
+		if (!preset) throw new GameError("INVALID_PRESET");
+		return { name: preset.name, layout: preset.layout };
+	}
+
 	on(
 		"lobby:create",
-		async ({ name, password, ruleset, columns, maxPlayers }) => {
+		async ({ name, password, ruleset, columns, maxPlayers, presetId }) => {
 			if (!RULESET_IDS.includes(ruleset as RulesetId))
 				throw new GameError("UNKNOWN_RULESET");
+			const design = await designFromPreset(presetId);
 			const id = newLobbyId();
 			const lobby: Lobby = {
 				id,
@@ -499,6 +518,7 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 				passwordHash: hashPassword(cleanText(password, "password", 64)),
 				hostId: me,
 				ruleset: ruleset as RulesetId,
+				design,
 				columns: intInRange(columns, 1, MAX_COLUMNS, "columns"),
 				maxPlayers: intInRange(
 					maxPlayers,
@@ -582,6 +602,14 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 		membersChanged(lobby);
 		ns!.to(room(lobby.id)).emit("lobby:closed", { lobbyId: lobby.id });
 		removeLobby(lobby);
+	});
+
+	on("lobby:design", async ({ lobbyId, presetId }) => {
+		const lobby = hostLobby(lobbyId, me);
+		if (lobby.phase === "playing") throw new GameError("GAME_RUNNING");
+		lobby.design = await designFromPreset(presetId);
+		touch(lobby);
+		broadcast(lobby);
 	});
 
 	on("lobby:start", ({ lobbyId }) => {

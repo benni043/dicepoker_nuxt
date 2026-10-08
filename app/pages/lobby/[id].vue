@@ -22,6 +22,8 @@
 		router.push(localePath({ name: "index", query: notice ? { notice } : {} }));
 	const errorText = useErrorText();
 	const { play: playDiceSound } = useSound(diceSfx, { volume: 0.5 });
+	const { layoutFor, load: loadDesigns } = useDiceDesigns();
+	onMounted(loadDesigns);
 
 	const state = ref<LobbyState | null>(null);
 	const status = ref<"loading" | "password" | "notfound" | "error" | "ready">(
@@ -47,6 +49,7 @@
 	let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const game = computed(() => state.value?.game ?? null);
+	const skin = computed(() => layoutFor(state.value?.design));
 	const isHost = computed(() => state.value?.hostId === meId.value);
 	const inGame = computed(
 		() => !!game.value && state.value?.phase !== "waiting",
@@ -414,6 +417,12 @@
 			>
 				👁 {{ $t("lobby.spectatorNote") }}
 			</p>
+			<LobbyDesignPicker
+				v-if="state.phase !== 'playing'"
+				:design="state.design"
+				:is-host="isHost"
+				@change="(presetId) => action('lobby:design', { presetId })"
+			/>
 
 			<LobbyWaitingRoom
 				v-if="state.phase === 'waiting'"
@@ -460,6 +469,7 @@
 							fill
 							:dice="game.dice"
 							:interactive="canHold"
+							:skin="skin"
 							@toggle="toggleHold"
 							@settled="onSettled"
 						/>
@@ -474,6 +484,7 @@
 							:held="game.dice.map((d) => d.held)"
 							:revealed="rollCount > 0 && !rolling"
 							:clickable="canHold"
+							:skin="skin"
 							@toggle="toggleHold"
 						/>
 						<button
