@@ -23,9 +23,9 @@
 		"subtitle": "Melde dich an, um Lobbys zu erstellen und mit Freunden zu spielen.",
 		"google": "Mit Google anmelden",
 		"failed": "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.",
-		"devHint": "Nur in der Entwicklung: ohne Google als Testspieler anmelden.",
-		"devName": "Name des Testspielers",
-		"devLogin": "Anmelden"
+		"guestHint": "Oder ohne Anmeldung als Gast spielen (erscheint nicht in der Bestenliste).",
+		"guestName": "Dein Name",
+		"guestLogin": "Als Gast spielen"
 	},
 	"home": {
 		"hello": "Hallo {name}",

@@ -1,5 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, notLike, sql } from "drizzle-orm";
 import type { GameRecord, LeaderboardEntry, PlayerStats } from "#shared/types";
 import { dbReady, schema, useDb } from "../db";
 
@@ -145,12 +145,19 @@ export async function getStats(userId: string): Promise<PlayerStats | null> {
 	return { id: user.id, name: user.name, ...totals!, history };
 }
 
+/** Guests and dev test players play normally but are left out of the leaderboard. */
+const isGoogleAccount = and(
+	notLike(users.googleSub, "guest:%"),
+	notLike(users.googleSub, "dev:%"),
+);
+
 export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
 	await dbReady();
 	return await useDb()
 		.select({ id: users.id, name: users.name, ...aggregates })
 		.from(gamePlayers)
 		.innerJoin(users, eq(users.id, gamePlayers.userId))
+		.where(isGoogleAccount)
 		.groupBy(users.id)
 		.orderBy(
 			desc(aggregates.wins),

@@ -23,9 +23,9 @@
 		"subtitle": "Sign in to create lobbies and play with friends.",
 		"google": "Sign in with Google",
 		"failed": "Sign-in failed. Please try again.",
-		"devHint": "Development only: sign in as a test player without Google.",
-		"devName": "Test player name",
-		"devLogin": "Sign in"
+		"guestHint": "Or play as a guest without signing in (not shown on the leaderboard).",
+		"guestName": "Your name",
+		"guestLogin": "Play as guest"
 	},
 	"home": {
 		"hello": "Hi {name}",

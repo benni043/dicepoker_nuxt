@@ -1,8 +1,7 @@
 <script setup lang="ts">
 	const localePath = useLocalePath();
 	const route = useRoute();
-	const isDev = import.meta.dev;
-	const devName = ref("");
+	const guestName = ref("");
 
 	const redirect = computed(
 		() => queryString(route.query.redirect) ?? localePath("index"),
@@ -13,8 +12,8 @@
 			`/api/auth/callback/google?redirect=${encodeURIComponent(redirect.value)}`,
 	);
 
-	function devLogin() {
-		window.location.href = `/auth/dev?name=${encodeURIComponent(devName.value)}&redirect=${encodeURIComponent(redirect.value)}`;
+	function guestLogin() {
+		window.location.href = `/auth/guest?name=${encodeURIComponent(guestName.value)}&redirect=${encodeURIComponent(redirect.value)}`;
 	}
 </script>
 
@@ -52,25 +51,24 @@
 			</a>
 
 			<form
-				v-if="isDev"
 				class="mt-6 border-t border-dashed border-line pt-4"
-				@submit.prevent="devLogin"
+				@submit.prevent="guestLogin"
 			>
-				<p class="mb-2 text-sm text-muted">{{ $t("login.devHint") }}</p>
+				<p class="mb-2 text-sm text-muted">{{ $t("login.guestHint") }}</p>
 				<div class="flex gap-2">
 					<input
-						v-model="devName"
+						v-model="guestName"
 						class="input"
 						maxlength="20"
 						required
-						:placeholder="$t('login.devName')"
+						:placeholder="$t('login.guestName')"
 					>
 					<button
 						type="submit"
 						class="btn whitespace-nowrap"
-						:disabled="!devName.trim()"
+						:disabled="!guestName.trim()"
 					>
-						{{ $t("login.devLogin") }}
+						{{ $t("login.guestLogin") }}
 					</button>
 				</div>
 			</form>
