@@ -4,13 +4,18 @@
 	const localePath = useLocalePath();
 
 	useHead({ htmlAttrs: { lang: locale } });
+	/** Set by pages (the running game) that should fill exactly one screen on desktop. */
+	const fitScreen = useState("fitScreen", () => false);
 
 	const navLink =
 		"font-semibold text-muted hover:text-ink [&.router-link-active]:text-ink";
 </script>
 
 <template>
-	<div class="flex min-h-screen flex-col">
+	<div
+		class="flex min-h-dvh flex-col"
+		:class="fitScreen ? 'lg:h-dvh lg:overflow-hidden' : ''"
+	>
 		<header
 			class="sticky top-0 z-10 flex h-header items-center justify-between border-b border-line bg-bg/85 px-4 backdrop-blur-md sm:px-6"
 		>
@@ -63,7 +68,10 @@
 		</header>
 		<ActiveGameBar v-if="loggedIn" />
 
-		<main class="mx-auto w-full max-w-[1400px] flex-1 p-4 sm:p-6">
+		<main
+			class="mx-auto w-full max-w-[87.5rem] flex-1 p-4 sm:p-6"
+			:class="fitScreen ? 'lg:flex lg:min-h-0 lg:flex-col' : ''"
+		>
 			<NuxtPage />
 		</main>
 	</div>

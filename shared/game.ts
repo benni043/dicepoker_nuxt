@@ -215,3 +215,53 @@ export function isSheetComplete(rules: Ruleset, sheet: ScoreColumn[]): boolean {
 		rules.categories.every((c) => col[c] !== undefined),
 	);
 }
+
+export const TURN_TIMEOUTS = [0, 30, 45, 60] as const;
+
+const maxPotential = new Map<string, number>();
+
+/** Highest score a category can ever yield; used to strike cheap fields first. */
+function potential(rules: Ruleset, category: Category): number {
+	const key = `${rules.id}:${category}`;
+	let best = maxPotential.get(key);
+	if (best === undefined) {
+		best = 0;
+		for (let n = 0; n < 6 ** DICE_COUNT; n++) {
+			const dice = Array.from(
+				{ length: DICE_COUNT },
+				(_, i) => (Math.floor(n / 6 ** i) % 6) + 1,
+			);
+			best = Math.max(best, rules.score(category, dice, true, {}));
+		}
+		maxPotential.set(key, best);
+	}
+	return best;
+}
+
+/** Picks the open field that scores the most; on ties (incl. striking) it uses the field with the lowest potential. */
+export function bestMove(
+	rules: Ruleset,
+	sheet: ScoreColumn[],
+	dice: number[],
+	served: boolean,
+): { column: number; category: Category } | null {
+	let best: { column: number; category: Category } | null = null;
+	let bestPoints = -1;
+	let bestPotential = 0;
+	sheet.forEach((column, index) => {
+		for (const category of rules.categories) {
+			if (column[category] !== undefined) continue;
+			const points = rules.score(category, dice, served, column);
+			const pot = potential(rules, category);
+			if (
+				points > bestPoints ||
+				(points === bestPoints && pot < bestPotential)
+			) {
+				best = { column: index, category };
+				bestPoints = points;
+				bestPotential = pot;
+			}
+		}
+	});
+	return best;
+}

@@ -27,7 +27,7 @@
 		>
 			<button
 				type="button"
-				class="size-[clamp(42px,12vw,52px)] overflow-hidden rounded-[10px] bg-die transition"
+				class="size-[clamp(2.625rem,12vw,3.25rem)] overflow-hidden rounded-[10px] bg-die transition"
 				:class="[
 					held[i]
 						? '-translate-y-[3px] shadow-[0_0_0_2px_var(--color-gold),0_0_0_5px_rgb(251_191_36/0.3),0_3px_0_var(--color-die-edge)]'

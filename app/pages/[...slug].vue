@@ -3,7 +3,7 @@
 </script>
 
 <template>
-	<div class="card mx-auto my-12 max-w-[420px] text-center">
+	<div class="card mx-auto my-12 max-w-[26.25rem] text-center">
 		<div class="mb-2 text-[3.5rem] leading-none font-extrabold text-accent">
 			404
 		</div>

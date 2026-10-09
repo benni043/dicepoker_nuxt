@@ -115,6 +115,15 @@
 	const roundPlayers = computed(() =>
 		orderedPlayers.value.filter((p) => game.value?.scores[p.id]),
 	);
+	/** Score sheet order: the player whose turn it is first, the one who just played last. */
+	const sheetPlayers = computed(() => {
+		const players = roundPlayers.value;
+		const current = players.findIndex(
+			(p) => p.id === game.value?.currentPlayerId,
+		);
+		if (state.value?.phase !== "playing" || current <= 0) return players;
+		return [...players.slice(current), ...players.slice(0, current)];
+	});
 	const inviteUrl = computed(() => `${location.origin}/lobby/${lobbyId}`);
 
 	const statusText = computed(() => {
@@ -144,17 +153,54 @@
 			column: a.column + 1,
 			points: a.points,
 		};
-		if (a.points === 0) return t("lobby.lastAction.struck", params);
+		const auto = a.auto
+			? ` (${t(a.auto === "skip" ? "lobby.lastAction.autoSkip" : "lobby.lastAction.auto")})`
+			: "";
+		if (a.points === 0) return t("lobby.lastAction.struck", params) + auto;
 		return (
 			t("lobby.lastAction.scored", params, a.points) +
-			(a.served ? ` – ${t("lobby.lastAction.served")}` : "")
+			(a.served ? ` – ${t("lobby.lastAction.served")}` : "") +
+			auto
 		);
 	});
 
-	useHead({
-		htmlAttrs: {
-			class: computed(() => (inGame.value ? "lg:overflow-hidden" : "")),
+	const fitScreen = useState("fitScreen", () => false);
+	watchEffect(() => (fitScreen.value = inGame.value));
+
+	const now = ref(Date.now());
+	const deadlineAt = ref<number | null>(null);
+	watch(
+		() => game.value?.turnRemaining,
+		(remaining) => {
+			deadlineAt.value =
+				remaining === null || remaining === undefined
+					? null
+					: Date.now() + remaining;
 		},
+		{ immediate: true },
+	);
+	const msLeft = computed(() =>
+		deadlineAt.value === null
+			? null
+			: Math.max(0, deadlineAt.value - now.value),
+	);
+	const secondsLeft = computed(() => Math.ceil((msLeft.value ?? 0) / 1000));
+	const timerFraction = computed(() =>
+		Math.min(1, (msLeft.value ?? 0) / ((state.value?.turnTimeout || 1) * 1000)),
+	);
+	const showTimer = computed(
+		() => state.value?.phase === "playing" && msLeft.value !== null,
+	);
+	const timerColor = computed(() =>
+		secondsLeft.value <= 5
+			? "bg-danger"
+			: secondsLeft.value <= 10
+				? "bg-gold"
+				: "bg-accent",
+	);
+	let clockTimer: ReturnType<typeof setInterval> | undefined;
+	onMounted(() => {
+		clockTimer = setInterval(() => (now.value = Date.now()), 200);
 	});
 
 	function showToast(text: string) {
@@ -318,22 +364,22 @@
 		socket.off("lobby:closed", onClosed);
 		clearTimeout(rollingFallback);
 		clearTimeout(toastTimer);
+		clearInterval(clockTimer);
+		fitScreen.value = false;
 		document.title = "Dice Poker";
 		if (status.value === "ready") socket.emit("lobby:exit", { lobbyId });
 	});
 </script>
 
 <template>
-	<div
-		:class="inGame ? 'lg:flex lg:h-[calc(100dvh-var(--spacing-header)-3rem)] lg:flex-col' : ''"
-	>
+	<div :class="inGame ? 'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col' : ''">
 		<p v-if="status === 'loading'" class="mt-12 text-center text-muted">
 			{{ $t("lobby.connecting", { id: lobbyId }) }}
 		</p>
 
 		<div
 			v-else-if="status === 'notfound'"
-			class="card mx-auto my-12 max-w-[420px]"
+			class="card mx-auto my-12 max-w-[26.25rem]"
 		>
 			<h2>{{ $t("lobby.notFoundTitle") }}</h2>
 			<p class="mb-4 text-muted">
@@ -346,7 +392,7 @@
 
 		<form
 			v-else-if="status === 'password'"
-			class="card mx-auto my-12 max-w-[420px]"
+			class="card mx-auto my-12 max-w-[26.25rem]"
 			@submit.prevent="join"
 		>
 			<h2>{{ $t("lobby.joinTitle", { id: lobbyId }) }}</h2>
@@ -368,7 +414,7 @@
 
 		<div
 			v-else-if="status === 'error'"
-			class="card mx-auto my-12 max-w-[420px]"
+			class="card mx-auto my-12 max-w-[26.25rem]"
 		>
 			<p class="mb-4 text-danger">{{ errorMsg }}</p>
 			<button type="button" class="btn" @click="enter">
@@ -404,6 +450,9 @@
 					ID <code>{{ state.id }}</code> ·
 					{{ $t(`rules.${state.ruleset}.name`) }} ·
 					{{ $t("common.columns", state.columns) }} ·
+					<template v-if="state.turnTimeout">
+						⏱ {{ $t("common.timeout", { n: state.turnTimeout }) }} ·
+					</template>
 					<button type="button" class="link" @click="copyInvite">
 						{{ copied ? $t("lobby.copied") : $t("lobby.copyInvite") }}
 					</button>
@@ -422,6 +471,12 @@
 				:design="state.design"
 				:is-host="isHost"
 				@change="(presetId) => action('lobby:design', { presetId })"
+			/>
+			<LobbyTimeoutPicker
+				v-if="state.phase !== 'playing'"
+				:seconds="state.turnTimeout"
+				:is-host="isHost"
+				@change="(seconds) => action('lobby:timeout', { seconds })"
 			/>
 
 			<LobbyWaitingRoom
@@ -489,7 +544,7 @@
 						/>
 						<button
 							type="button"
-							class="btn btn-primary w-full px-6 py-3 text-[1.05rem] sm:w-auto sm:min-w-[170px]"
+							class="btn btn-primary w-full px-6 py-3 text-[1.05rem] sm:w-auto sm:min-w-[10.625rem]"
 							:disabled="!canRoll"
 							@click="roll"
 						>
@@ -502,13 +557,31 @@
 
 					<div
 						v-if="state.phase === 'playing'"
-						class="flex min-h-9 items-center gap-4"
+						class="flex min-h-9 flex-wrap items-center gap-x-4 gap-y-2"
 					>
 						<p :class="isMyTurn ? 'font-semibold text-accent' : 'text-muted'">
 							{{ statusText }}
 						</p>
+						<div
+							v-if="showTimer"
+							class="ml-auto flex items-center gap-2.5 text-sm font-semibold tabular-nums"
+							:class="secondsLeft <= 10 ? (secondsLeft <= 5 ? 'text-danger' : 'text-gold') : 'text-muted'"
+							role="timer"
+						>
+							<span>⏱ {{ $t("lobby.timeLeft", { n: secondsLeft }) }}</span>
+							<span
+								class="h-2 w-24 overflow-hidden rounded-full bg-surface-3"
+								aria-hidden="true"
+							>
+								<span
+									class="block h-full rounded-full transition-[width] duration-200 ease-linear"
+									:class="timerColor"
+									:style="{ width: `${timerFraction * 100}%` }"
+								/>
+							</span>
+						</div>
 						<button
-							v-if="currentPlayer && !currentPlayer.connected && !isMyTurn"
+							v-if="isHost && currentPlayer && !currentPlayer.connected && !isMyTurn"
 							type="button"
 							class="btn btn-ghost"
 							@click="skip"
@@ -523,10 +596,10 @@
 
 				<div
 					ref="sheetRef"
-					class="card scroll-mt-[calc(var(--spacing-header)+0.75rem)] p-3 lg:min-h-0 lg:overflow-auto"
+					class="card scroll-mt-[calc(var(--spacing-header)+0.75rem)] p-3 lg:flex lg:min-h-0 lg:flex-col lg:overflow-auto"
 				>
 					<ScoreSheet
-						:players="roundPlayers"
+						:players="sheetPlayers"
 						:ruleset="state.ruleset"
 						:columns="state.columns"
 						:scores="game.scores"

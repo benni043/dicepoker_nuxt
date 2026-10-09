@@ -26,7 +26,7 @@
 	const actionCard =
 		"card text-ink transition hover:-translate-y-0.5 hover:border-accent";
 	const actionIcon =
-		"mb-3 grid size-[42px] place-items-center rounded-[10px] bg-accent/12 text-[1.4rem] font-extrabold text-accent";
+		"mb-3 grid size-[2.625rem] place-items-center rounded-[10px] bg-accent/12 text-[1.4rem] font-extrabold text-accent";
 </script>
 
 <template>
@@ -43,7 +43,7 @@
 			<p class="text-muted">{{ $t("home.intro", { max: MAX_PLAYERS }) }}</p>
 		</section>
 
-		<div class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
+		<div class="grid grid-cols-[repeat(auto-fit,minmax(16.25rem,1fr))] gap-5">
 			<NuxtLink :to="localePath('lobby-new')" :class="actionCard">
 				<span :class="actionIcon">＋</span>
 				<h2>{{ $t("home.createTitle") }}</h2>
@@ -65,7 +65,7 @@
 				</div>
 				<div
 					v-if="stats"
-					class="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3"
+					class="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3"
 				>
 					<StatTile :value="stats.games" :label="$t('stats.games')" />
 					<StatTile :value="stats.wins" :label="$t('stats.wins')" />

@@ -5,6 +5,7 @@
 		MIN_PLAYERS,
 		RULESET_IDS,
 		type RulesetId,
+		TURN_TIMEOUTS,
 	} from "#shared/game";
 
 	const { call } = useGame();
@@ -20,6 +21,7 @@
 		ruleset: "poker" as RulesetId,
 		columns: 3,
 		maxPlayers: 4,
+		turnTimeout: 0,
 		presetId: "",
 	});
 
@@ -53,7 +55,7 @@
 </script>
 
 <template>
-	<form class="card mx-auto my-12 max-w-[420px]" @submit.prevent="create">
+	<form class="card mx-auto my-12 max-w-[26.25rem]" @submit.prevent="create">
 		<h1>{{ $t("home.createTitle") }}</h1>
 		<label class="field">
 			<span>{{ $t("fields.lobbyName") }}</span>
@@ -122,6 +124,14 @@
 				</select>
 			</label>
 		</div>
+		<label class="field">
+			<span>{{ $t("fields.turnTimeout") }}</span>
+			<select v-model.number="form.turnTimeout" class="input">
+				<option v-for="n in TURN_TIMEOUTS" :key="n" :value="n">
+					{{ n ? $t("timeoutOption.seconds", { n }) : $t("timeoutOption.off") }}
+				</option>
+			</select>
+		</label>
 		<p v-if="error" class="my-2 text-danger">{{ error }}</p>
 		<button
 			type="submit"

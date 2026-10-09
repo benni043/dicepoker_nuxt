@@ -22,7 +22,7 @@
 
 <template>
 	<section
-		class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-5"
+		class="grid grid-cols-[repeat(auto-fit,minmax(18.75rem,1fr))] items-start gap-5"
 	>
 		<div class="card">
 			<h2>

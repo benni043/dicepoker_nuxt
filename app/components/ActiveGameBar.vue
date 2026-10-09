@@ -57,7 +57,7 @@
 		<div
 			v-for="l in running.slice(0, 2)"
 			:key="l.id"
-			class="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-2 text-sm not-first:border-t not-first:border-accent/15 sm:px-6"
+			class="mx-auto flex max-w-[87.5rem] items-center gap-3 px-4 py-2 text-sm not-first:border-t not-first:border-accent/15 sm:px-6"
 		>
 			<span
 				class="size-2 shrink-0 animate-pulse rounded-full"

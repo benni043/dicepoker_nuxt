@@ -9,7 +9,9 @@
 		"loading": "Lädt…",
 		"retry": "Erneut versuchen",
 		"toHome": "Zur Startseite",
-		"columns": "{n} Spalte | {n} Spalten"
+		"columns": "{n} Spalte | {n} Spalten",
+		"timeout": "{n} s pro Zug",
+		"noTimeout": "ohne Zeitlimit"
 	},
 	"phase": {
 		"waiting": "Wartet",
@@ -57,7 +59,8 @@
 		"die": "Würfel",
 		"column": "Spalte",
 		"name": "Name",
-		"ruleset": "Spielregeln"
+		"ruleset": "Spielregeln",
+		"turnTimeout": "Zeit pro Zug"
 	},
 	"lobby": {
 		"connecting": "Verbinde mit Lobby {id}…",
@@ -94,7 +97,9 @@
 		"lastAction": {
 			"struck": "{name} streicht {field} (Spalte {column}).",
 			"scored": "{name}: {points} Punkt auf {field} (Spalte {column}) | {name}: {points} Punkte auf {field} (Spalte {column})",
-			"served": "serviert!"
+			"served": "serviert!",
+			"auto": "Zeit abgelaufen, automatisch eingetragen",
+			"autoSkip": "Zug übersprungen, automatisch gewürfelt und eingetragen"
 		},
 		"results": {
 			"youWon": "Du hast gewonnen!",
@@ -109,7 +114,8 @@
 			"abandoned": "Alle Spieler waren offline – das Spiel wurde abgebrochen."
 		},
 		"spectators": "Zuschauer ({count})",
-		"spectatorNote": "Du schaust zu. Sobald ein Platz frei ist, spielst du ab der nächsten Runde mit."
+		"spectatorNote": "Du schaust zu. Sobald ein Platz frei ist, spielst du ab der nächsten Runde mit.",
+		"timeLeft": "Noch {n} s"
 	},
 	"tray": {
 		"held": "gehalten",
@@ -199,7 +205,8 @@
 		"ONLY_IN_WAITING_ROOM": "Das geht nur im Warteraum.",
 		"UNKNOWN_RULESET": "Unbekannte Spielregeln.",
 		"INVALID_PRESET": "Unbekanntes Preset.",
-		"GAME_RUNNING": "Das geht nur zwischen den Runden."
+		"GAME_RUNNING": "Das geht nur zwischen den Runden.",
+		"INVALID_TIMEOUT": "Ungültiges Zeitlimit."
 	},
 	"notFound": {
 		"title": "Seite nicht gefunden",
@@ -284,5 +291,9 @@
 		"saved": "Gespeichert ✓",
 		"remove": "Entfernen",
 		"tooManySaved": "Zu viele gespeicherte Presets (maximal 50)."
+	},
+	"timeoutOption": {
+		"off": "Unbegrenzt",
+		"seconds": "{n} Sekunden"
 	}
 }

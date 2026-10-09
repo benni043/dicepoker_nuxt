@@ -53,9 +53,15 @@
 		);
 	}
 
-	const cellBase = "h-[34px] min-w-[42px] border-b border-line p-0 text-center";
+	const cellBase =
+		"h-[2.125rem] min-w-[2.625rem] border-b border-line p-0 text-center";
 	const categoryCell =
 		"sticky left-0 z-1 min-w-14 border-b border-line bg-surface px-2.5 text-left font-bold text-muted";
+
+	/** Table rows incl. both header rows; used to size the rows to the available height. */
+	const rowCount = computed(
+		() => rules.value.categories.length + (rules.value.bonus ? 1 : 0) + 4,
+	);
 
 	function columnClass(playerId: string, column: number) {
 		return [
@@ -67,7 +73,11 @@
 </script>
 
 <template>
-	<div class="overflow-x-auto">
+	<!-- on desktop every row gets an equal share of the card height and the text grows with it -->
+	<div
+		class="sheet-fit overflow-x-auto lg:min-h-0 lg:flex-1"
+		:style="{ '--rows': rowCount, '--cols': players.length * columns }"
+	>
 		<table class="w-full border-separate border-spacing-0 text-sm tabular-nums">
 			<thead>
 				<tr>
@@ -91,7 +101,7 @@
 							v-for="c in columns"
 							:key="c"
 							:class="columnClass(p.id, c)"
-							class="text-xs font-semibold text-muted"
+							class="text-[0.8em] font-semibold text-muted"
 						>
 							{{ ROMAN[c - 1] }}
 						</th>
@@ -149,7 +159,7 @@
 								v-for="c in columns"
 								:key="c"
 								:class="columnClass(p.id, c)"
-								class="text-xs"
+								class="text-[0.8em]"
 							>
 								<span
 									v-if="columnBonus(rules, sheet(p.id)[c - 1])"
@@ -186,7 +196,7 @@
 						:key="p.id"
 						:colspan="columns"
 						:class="columnClass(p.id, 1)"
-						class="border-b-0 text-[1.05rem] font-extrabold"
+						class="border-b-0 text-[1.15em] font-extrabold"
 					>
 						{{ sheetTotal(rules, sheet(p.id)) }}
 					</td>
@@ -195,3 +205,24 @@
 		</table>
 	</div>
 </template>
+
+<style scoped>
+	@media (min-width: 64rem) {
+		.sheet-fit {
+			container-type: size;
+		}
+
+		.sheet-fit table {
+			--row-h: max(2.125rem, calc((100cqh - 2px) / var(--rows)));
+			font-size: clamp(
+				0.875rem,
+				min(var(--row-h) * 0.4, 100cqw / (var(--cols) + 1.5) * 0.4),
+				1.75rem
+			);
+		}
+
+		.sheet-fit :is(th, td) {
+			height: var(--row-h);
+		}
+	}
+</style>

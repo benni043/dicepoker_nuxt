@@ -31,7 +31,7 @@
 </script>
 
 <template>
-	<form class="card mx-auto my-12 max-w-[420px]" @submit.prevent="join">
+	<form class="card mx-auto my-12 max-w-[26.25rem]" @submit.prevent="join">
 		<h1>{{ $t("home.joinTitle") }}</h1>
 		<label class="field">
 			<span>{{ $t("fields.lobbyId") }}</span>

@@ -20,7 +20,7 @@
 
 <template>
 	<div class="text-center">
-		<div class="card mx-auto my-12 max-w-[420px]">
+		<div class="card mx-auto my-12 max-w-[26.25rem]">
 			<div class="mb-2 text-5xl leading-none text-accent">⚄</div>
 			<h1>{{ $t("login.title") }}</h1>
 			<p class="text-muted">{{ $t("login.subtitle") }}</p>

@@ -29,7 +29,11 @@ export interface LastAction {
 	category: Category;
 	points: number;
 	served: boolean;
+	/** Set when the field was written automatically (time ran out / turn skipped). */
+	auto?: AutoReason;
 }
+
+export type AutoReason = "timeout" | "skip";
 
 export interface GameState {
 	order: string[];
@@ -39,6 +43,8 @@ export interface GameState {
 	dice: DieState[];
 	scores: Record<string, ScoreColumn[]>;
 	lastAction: LastAction | null;
+	/** Milliseconds until the current turn times out (null = no timer running). */
+	turnRemaining: number | null;
 }
 
 export interface LobbyState {
@@ -48,6 +54,8 @@ export interface LobbyState {
 	ruleset: RulesetId;
 	columns: number;
 	maxPlayers: number;
+	/** Seconds a player has per move; 0 = no limit. */
+	turnTimeout: number;
 	phase: LobbyPhase;
 	players: PublicPlayer[];
 	spectators: PublicPlayer[];

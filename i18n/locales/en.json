@@ -9,7 +9,9 @@
 		"loading": "Loading…",
 		"retry": "Try again",
 		"toHome": "Back to home",
-		"columns": "{n} column | {n} columns"
+		"columns": "{n} column | {n} columns",
+		"timeout": "{n} s per move",
+		"noTimeout": "no time limit"
 	},
 	"phase": {
 		"waiting": "Waiting",
@@ -57,7 +59,8 @@
 		"die": "Die",
 		"column": "Column",
 		"name": "Name",
-		"ruleset": "Rules"
+		"ruleset": "Rules",
+		"turnTimeout": "Time per move"
 	},
 	"lobby": {
 		"connecting": "Connecting to lobby {id}…",
@@ -94,7 +97,9 @@
 		"lastAction": {
 			"struck": "{name} strikes {field} (column {column}).",
 			"scored": "{name}: {points} point on {field} (column {column}) | {name}: {points} points on {field} (column {column})",
-			"served": "served!"
+			"served": "served!",
+			"auto": "time ran out, filled in automatically",
+			"autoSkip": "turn skipped, rolled and filled in automatically"
 		},
 		"results": {
 			"youWon": "You won!",
@@ -109,7 +114,8 @@
 			"abandoned": "All players were offline – the game was cancelled."
 		},
 		"spectators": "Spectators ({count})",
-		"spectatorNote": "You are watching. As soon as a seat is free, you play from the next round on."
+		"spectatorNote": "You are watching. As soon as a seat is free, you play from the next round on.",
+		"timeLeft": "{n} s left"
 	},
 	"tray": {
 		"held": "held",
@@ -199,7 +205,8 @@
 		"ONLY_IN_WAITING_ROOM": "This is only possible in the waiting room.",
 		"UNKNOWN_RULESET": "Unknown rules.",
 		"INVALID_PRESET": "Unknown preset.",
-		"GAME_RUNNING": "Only possible between rounds."
+		"GAME_RUNNING": "Only possible between rounds.",
+		"INVALID_TIMEOUT": "Invalid time limit."
 	},
 	"notFound": {
 		"title": "Page not found",
@@ -284,5 +291,9 @@
 		"saved": "Saved ✓",
 		"remove": "Remove",
 		"tooManySaved": "Too many saved presets (max. 50)."
+	},
+	"timeoutOption": {
+		"off": "Unlimited",
+		"seconds": "{n} seconds"
 	}
 }

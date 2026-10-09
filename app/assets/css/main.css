@@ -24,7 +24,7 @@
 	--color-pip-red: #c0262d;
 	--color-bar: #10261a;
 
-	--spacing-header: 58px;
+	--spacing-header: 3.625rem;
 	--shadow-card: 0 10px 30px rgb(0 0 0 / 0.35);
 
 	--animate-flash: flash 1.6s ease-out;
@@ -40,6 +40,8 @@
 	:root {
 		color-scheme: dark;
 		touch-action: manipulation;
+		/* 16px up to Full HD, then the whole UI scales with the screen (e.g. 4K looks like a bigger Full HD instead of a narrow strip) */
+		font-size: clamp(16px, min(0.8333vw, 1.4815vh), 32px);
 	}
 
 	body {

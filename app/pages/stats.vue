@@ -45,7 +45,7 @@
 
 		<section v-if="stats" class="card">
 			<h2>{{ stats.name }}</h2>
-			<div class="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3">
+			<div class="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3">
 				<StatTile :value="stats.games" :label="$t('stats.games')" />
 				<StatTile :value="stats.wins" :label="$t('stats.wins')" />
 				<StatTile
@@ -61,7 +61,7 @@
 		</section>
 
 		<div
-			class="grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] items-start gap-5"
+			class="grid grid-cols-[repeat(auto-fit,minmax(21.25rem,1fr))] items-start gap-5"
 		>
 			<section class="card">
 				<h2>{{ $t("stats.recent") }}</h2>

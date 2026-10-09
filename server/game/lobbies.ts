@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import type { Namespace, Socket } from "socket.io";
 import {
+	bestMove,
 	type Category,
 	DICE_COUNT,
 	isSheetComplete,
@@ -14,8 +15,10 @@ import {
 	rulesetOf,
 	type ScoreColumn,
 	sheetTotal,
+	TURN_TIMEOUTS,
 } from "#shared/game";
 import type {
+	AutoReason,
 	DieState,
 	LastAction,
 	LobbyDesign,
@@ -26,6 +29,7 @@ import type {
 	PublicPlayer,
 	RollAnimation,
 } from "#shared/types";
+import { autoRollTurn } from "./autoplay";
 import { getUsablePreset } from "./designs";
 import { simulateRoll } from "./physics";
 import {
@@ -54,6 +58,7 @@ interface Game {
 	scores: Record<string, ScoreColumn[]>;
 	rollingUntil: number;
 	lastAction: LastAction | null;
+	turnDeadline: number | null;
 }
 
 interface Lobby {
@@ -65,6 +70,7 @@ interface Lobby {
 	design: LobbyDesign | null;
 	columns: number;
 	maxPlayers: number;
+	turnTimeout: number;
 	phase: LobbyPhase;
 	players: LobbyPlayer[];
 	spectators: LobbyPlayer[];
@@ -93,6 +99,7 @@ const lobbies = new Map<string, Lobby>();
 const presence = new Map<string, Map<string, Set<string>>>();
 const persistTimers = new Map<string, NodeJS.Timeout>();
 const abandonTimers = new Map<string, NodeJS.Timeout>();
+const turnTimers = new Map<string, NodeJS.Timeout>();
 let loading: Promise<void> | null = null;
 let ns: Namespace | null = null;
 
@@ -113,12 +120,16 @@ function ensureLoaded() {
 				lobby.spectators ??= [];
 				lobby.ruleset ??= "poker";
 				lobby.design ??= null;
-				if (lobby.game)
+				lobby.turnTimeout ??= 0;
+				if (lobby.game) {
 					lobby.game.names ??= Object.fromEntries(
 						lobby.players.map((p) => [p.id, p.name]),
 					);
+					lobby.game.turnDeadline ??= null;
+				}
 				lobbies.set(lobby.id, lobby);
 				checkAbandoned(lobby);
+				resumeTurnTimer(lobby);
 			} else {
 				await deleteLobbyRecord(lobby.id);
 			}
@@ -149,6 +160,7 @@ function removeLobby(lobby: Lobby) {
 	clearTimeout(persistTimers.get(lobby.id));
 	clearTimeout(abandonTimers.get(lobby.id));
 	abandonTimers.delete(lobby.id);
+	stopTurnTimer(lobby);
 	deleteLobbyRecord(lobby.id).catch(console.error);
 	ns?.in(room(lobby.id)).socketsLeave(room(lobby.id));
 }
@@ -173,6 +185,7 @@ function publicState(lobby: Lobby): LobbyState {
 		design: lobby.design,
 		columns: lobby.columns,
 		maxPlayers: lobby.maxPlayers,
+		turnTimeout: lobby.turnTimeout,
 		phase: lobby.phase,
 		winners: lobby.winners,
 		players: lobby.players.map(toPublic),
@@ -186,6 +199,10 @@ function publicState(lobby: Lobby): LobbyState {
 					dice: g.dice,
 					scores: g.scores,
 					lastAction: g.lastAction,
+					turnRemaining:
+						g.turnDeadline === null
+							? null
+							: Math.max(0, g.turnDeadline - Date.now()),
 				}
 			: null,
 	};
@@ -249,11 +266,13 @@ function startGame(lobby: Lobby) {
 		),
 		rollingUntil: 0,
 		lastAction: null,
+		turnDeadline: null,
 	};
 	lobby.phase = "playing";
 	lobby.winners = [];
 	lobby.rounds++;
 	checkAbandoned(lobby);
+	armTurnTimer(lobby);
 	membersChanged(lobby);
 }
 
@@ -267,6 +286,7 @@ function nextTurn(lobby: Lobby) {
 	const g = lobby.game!;
 	g.turn = (g.turn + 1) % g.order.length;
 	resetTurn(g);
+	armTurnTimer(lobby);
 	membersChanged(lobby);
 }
 
@@ -275,7 +295,141 @@ function stopAbandonTimer(lobby: Lobby) {
 	abandonTimers.delete(lobby.id);
 }
 
+function stopTurnTimer(lobby: Lobby) {
+	clearTimeout(turnTimers.get(lobby.id));
+	turnTimers.delete(lobby.id);
+	if (lobby.game) lobby.game.turnDeadline = null;
+}
+
+function setTurnTimer(lobby: Lobby, deadline: number) {
+	clearTimeout(turnTimers.get(lobby.id));
+	lobby.game!.turnDeadline = deadline;
+	turnTimers.set(
+		lobby.id,
+		setTimeout(
+			() => {
+				turnTimers.delete(lobby.id);
+				onTurnTimeout(lobby).catch((err) =>
+					console.error("[game] turn timeout failed", err),
+				);
+			},
+			Math.max(0, deadline - Date.now()),
+		),
+	);
+}
+
+/** (Re)starts the move clock; after a roll it only starts once the dice have landed. */
+function armTurnTimer(lobby: Lobby) {
+	const g = lobby.game;
+	if (lobby.phase !== "playing" || !g || lobby.turnTimeout <= 0) {
+		stopTurnTimer(lobby);
+		return;
+	}
+	setTurnTimer(
+		lobby,
+		Math.max(Date.now(), g.rollingUntil) + lobby.turnTimeout * 1000,
+	);
+}
+
+function resumeTurnTimer(lobby: Lobby) {
+	const deadline = lobby.game?.turnDeadline;
+	if (lobby.phase === "playing" && deadline) setTurnTimer(lobby, deadline);
+	else armTurnTimer(lobby);
+}
+
+/**
+ * The current player ran out of time for this move: roll for them (keeping held dice)
+ * and give them a fresh clock; once no roll is left, write the best field.
+ */
+async function onTurnTimeout(lobby: Lobby) {
+	const g = lobby.game;
+	if (lobbies.get(lobby.id) !== lobby || lobby.phase !== "playing" || !g)
+		return;
+	const playerId = g.order[g.turn]!;
+	if (g.rollCount < MAX_ROLLS && !g.dice.every((d) => d.held)) {
+		rollDice(lobby, g);
+		armTurnTimer(lobby);
+	} else {
+		await scoreBest(lobby, g, playerId, "timeout");
+	}
+	touch(lobby);
+	broadcast(lobby);
+}
+
+/** Writes the field that scores the most with the current dice. */
+async function scoreBest(
+	lobby: Lobby,
+	game: Game,
+	playerId: string,
+	auto: AutoReason,
+) {
+	const rules = rulesetOf(lobby.ruleset);
+	const move = bestMove(
+		rules,
+		game.scores[playerId]!,
+		game.dice.map((d) => d.value),
+		rules.hasServed && game.rollCount === 1,
+	);
+	if (move)
+		await scoreField(lobby, game, playerId, move.column, move.category, auto);
+	else nextTurn(lobby);
+}
+
+function rollDice(lobby: Lobby, game: Game) {
+	const roll = simulateRoll(game.dice);
+	roll.indices.forEach((dieIndex, k) => {
+		game.dice[dieIndex] = {
+			value: roll.values[k]!,
+			held: false,
+			pose: roll.poses[k]!,
+		};
+	});
+	game.rollCount++;
+	game.rollingUntil = Date.now() + ((roll.frames.length - 1) / roll.fps) * 1000;
+
+	const animation: RollAnimation = {
+		lobbyId: lobby.id,
+		indices: roll.indices,
+		frames: roll.frames,
+		fps: roll.fps,
+	};
+	ns?.to(room(lobby.id)).emit("game:roll", animation);
+}
+
+async function scoreField(
+	lobby: Lobby,
+	game: Game,
+	playerId: string,
+	column: number,
+	category: Category,
+	auto?: AutoReason,
+) {
+	const rules = rulesetOf(lobby.ruleset);
+	const sheetColumn = game.scores[playerId]![column]!;
+	const served = rules.hasServed && game.rollCount === 1;
+	const points = rules.score(
+		category,
+		game.dice.map((d) => d.value),
+		served,
+		sheetColumn,
+	);
+	sheetColumn[category] = points;
+	game.lastAction = {
+		playerId,
+		column,
+		category,
+		points,
+		served: served && points > 0 && !isUpper(category),
+		auto,
+	};
+
+	if (game.order.every((id) => isSheetComplete(rules, game.scores[id]!)))
+		await finishGame(lobby);
+	else nextTurn(lobby);
+}
+
 function abortGame(lobby: Lobby, reason: LobbyNotice["code"]) {
+	stopTurnTimer(lobby);
 	lobby.game = null;
 	lobby.phase = "waiting";
 	lobby.winners = [];
@@ -296,6 +450,7 @@ async function finishGame(lobby: Lobby) {
 	lobby.phase = "finished";
 	lobby.winners = totals.filter((t) => t.score === best).map((t) => t.id);
 	stopAbandonTimer(lobby);
+	stopTurnTimer(lobby);
 	fillSeats(lobby);
 	membersChanged(lobby);
 
@@ -325,7 +480,10 @@ async function removeFromGame(lobby: Lobby, playerId: string) {
 		return;
 	}
 	g.turn %= g.order.length;
-	if (wasCurrent) resetTurn(g);
+	if (wasCurrent) {
+		resetTurn(g);
+		armTurnTimer(lobby);
+	}
 	const rules = rulesetOf(lobby.ruleset);
 	if (g.order.every((id) => isSheetComplete(rules, g.scores[id]!)))
 		await finishGame(lobby);
@@ -419,6 +577,13 @@ function intInRange(
 	return n;
 }
 
+function turnTimeoutOf(value: unknown): number {
+	const seconds = Number(value);
+	if (!(TURN_TIMEOUTS as readonly number[]).includes(seconds))
+		throw new GameError("INVALID_TIMEOUT");
+	return seconds;
+}
+
 function findLobby(lobbyId: unknown): Lobby {
 	const id = typeof lobbyId === "string" ? lobbyId.trim().toUpperCase() : "";
 	const lobby = lobbies.get(id);
@@ -507,7 +672,15 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 
 	on(
 		"lobby:create",
-		async ({ name, password, ruleset, columns, maxPlayers, presetId }) => {
+		async ({
+			name,
+			password,
+			ruleset,
+			columns,
+			maxPlayers,
+			turnTimeout,
+			presetId,
+		}) => {
 			if (!RULESET_IDS.includes(ruleset as RulesetId))
 				throw new GameError("UNKNOWN_RULESET");
 			const design = await designFromPreset(presetId);
@@ -526,6 +699,7 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 					MAX_PLAYERS,
 					"maxPlayers",
 				),
+				turnTimeout: turnTimeoutOf(turnTimeout ?? 0),
 				phase: "waiting",
 				players: [{ id: me, name: await myName() }],
 				spectators: [],
@@ -622,30 +796,21 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 		broadcast(lobby);
 	});
 
+	on("lobby:timeout", ({ lobbyId, seconds }) => {
+		const lobby = hostLobby(lobbyId, me);
+		if (lobby.phase === "playing") throw new GameError("GAME_RUNNING");
+		lobby.turnTimeout = turnTimeoutOf(seconds);
+		touch(lobby);
+		broadcast(lobby);
+	});
+
 	on("game:roll", ({ lobbyId }) => {
 		const { lobby, game } = activeTurn(lobbyId, me);
 		if (game.rollCount >= MAX_ROLLS) throw new GameError("NO_ROLLS_LEFT");
 		if (game.dice.every((d) => d.held)) throw new GameError("ALL_HELD");
 
-		const roll = simulateRoll(game.dice);
-		roll.indices.forEach((dieIndex, k) => {
-			game.dice[dieIndex] = {
-				value: roll.values[k]!,
-				held: false,
-				pose: roll.poses[k]!,
-			};
-		});
-		game.rollCount++;
-		game.rollingUntil =
-			Date.now() + ((roll.frames.length - 1) / roll.fps) * 1000;
-
-		const animation: RollAnimation = {
-			lobbyId: lobby.id,
-			indices: roll.indices,
-			frames: roll.frames,
-			fps: roll.fps,
-		};
-		ns!.to(room(lobby.id)).emit("game:roll", animation);
+		rollDice(lobby, game);
+		armTurnTimer(lobby);
 		touch(lobby);
 		broadcast(lobby);
 	});
@@ -668,38 +833,31 @@ export function registerGameHandlers(socket: Socket, namespace: Namespace) {
 		if (!rules.categories.includes(category as Category))
 			throw new GameError("UNKNOWN_FIELD");
 		const cat = category as Category;
-		const sheetColumn = game.scores[me]![col]!;
-		if (sheetColumn[cat] !== undefined) throw new GameError("FIELD_TAKEN");
+		if (game.scores[me]![col]![cat] !== undefined)
+			throw new GameError("FIELD_TAKEN");
 
-		const served = rules.hasServed && game.rollCount === 1;
-		const points = rules.score(
-			cat,
-			game.dice.map((d) => d.value),
-			served,
-			sheetColumn,
-		);
-		sheetColumn[cat] = points;
-		game.lastAction = {
-			playerId: me,
-			column: col,
-			category: cat,
-			points,
-			served: served && points > 0 && !isUpper(cat),
-		};
-
-		if (game.order.every((id) => isSheetComplete(rules, game.scores[id]!)))
-			await finishGame(lobby);
-		else nextTurn(lobby);
+		await scoreField(lobby, game, me, col, cat);
 		touch(lobby);
 		broadcast(lobby);
 	});
 
-	on("game:skip", ({ lobbyId }) => {
+	on("game:skip", async ({ lobbyId }) => {
 		const { lobby, game } = playingLobby(lobbyId, me);
+		if (lobby.hostId !== me) throw new GameError("HOST_ONLY");
 		const current = game.order[game.turn]!;
 		if (current === me || isOnline(lobby.id, current))
 			throw new GameError("ONLY_OFFLINE_SKIP");
-		nextTurn(lobby);
+		// the skipped player still gets an entry: roll their remaining rolls instantly and write the best field
+		Object.assign(
+			game,
+			autoRollTurn(
+				rulesetOf(lobby.ruleset),
+				game.scores[current]!,
+				game.dice,
+				game.rollCount,
+			),
+		);
+		await scoreBest(lobby, game, current, "skip");
 		touch(lobby);
 		broadcast(lobby);
 	});
